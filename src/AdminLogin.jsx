@@ -10,7 +10,7 @@ import logo from './assets/rupiksha_logo.png';
 /* ── Config ────────────────────────────────── */
 const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
 const OTP_EMAIL = 'dubeyom1406@gmail.com';
-const BACKEND_URL = 'http://localhost:5001';
+const BACKEND_URL = '';
 
 const TABS = ['Password', 'OTP Login'];
 const OTP_LENGTH = 6;
