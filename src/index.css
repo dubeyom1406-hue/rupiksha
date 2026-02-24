@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+/* 
+Is ek line ka matlab hai:
+"Tailwind CSS ki saari powers is project mein le aao."
+Ab humein alag se koi config file banane ki zaroorat nahi hai (v4 ka naya feature).
+*/
+
+:root {
+  font-family: 'Inter', 'Outfit', 'Montserrat', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 700;
+  color-scheme: light dark;
+  background-color: #f7f9fc;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

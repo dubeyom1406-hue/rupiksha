@@ -1,0 +1,29 @@
+# Environment Files
+.env
+*.env
+**/.env
+
+# Dependencies and Binaries
+node_modules/
+dist/
+dist-ssr/
+target/
+*.jar
+*.war
+*.zip
+*.tar.gz
+
+# JDK and local tools
+java_backend/jdk*
+jdk*
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
