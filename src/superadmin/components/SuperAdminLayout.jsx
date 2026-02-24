@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import SuperAdminSidebar from './SuperAdminSidebar';
-import SuperAdminTopBar from './SuperAdminTopBar';
+import SuperAdminSidebar from './superadminSidebar';
+import SuperAdminTopBar from './superadminTopBar';
 import { sharedDataService } from '../../services/sharedDataService';
 
 const SuperAdminLayout = () => {
@@ -43,12 +43,12 @@ const SuperAdminLayout = () => {
                 {/* Tab Navigation */}
                 <div className="bg-white border-b border-slate-100 px-4 flex items-center gap-1 shrink-0 overflow-x-auto shadow-sm">
                     {[
-                        { to: '/SuperAdmin', label: 'Dashboard', end: true },
-                        { to: '/SuperAdmin/distributors', label: 'Distributors' },
-                        { to: '/SuperAdmin/retailers', label: 'Retailers' },
-                        { to: '/SuperAdmin/transactions', label: 'Transactions' },
-                        { to: '/SuperAdmin/reports', label: 'Reports' },
-                        { to: '/SuperAdmin/accounts', label: 'Accounts' },
+                        { to: '/superadmin', label: 'Dashboard', end: true },
+                        { to: '/superadmin/distributors', label: 'Distributors' },
+                        { to: '/superadmin/retailers', label: 'Retailers' },
+                        { to: '/superadmin/transactions', label: 'Transactions' },
+                        { to: '/superadmin/reports', label: 'Reports' },
+                        { to: '/superadmin/accounts', label: 'Accounts' },
                     ].map(({ to, label, end }) => (
                         <NavLink
                             key={to}

@@ -6,69 +6,69 @@ import {
 
 export const menuItems = [
     {
-        title: "APPROVALS", icon: CheckCircle2, path: "/SuperAdmin/approvals",
+        title: "APPROVALS", icon: CheckCircle2, path: "/superadmin/approvals",
     },
     {
-        title: "DISTRIBUTORS", icon: Users, path: "/SuperAdmin/distributors",
+        title: "DISTRIBUTORS", icon: Users, path: "/superadmin/distributors",
     },
     {
-        title: "RETAILERS", icon: Users, path: "/SuperAdmin/retailers",
+        title: "RETAILERS", icon: Users, path: "/superadmin/retailers",
         submenu: [
-            { title: "Retailer Details", icon: Monitor, path: "/SuperAdmin/retailers/details" },
-            { title: "Share Rupiksha APP", icon: Share2, path: "/SuperAdmin/retailers/share" },
-            { title: "Retailer Service Workflow", icon: Monitor, path: "/SuperAdmin/retailers/workflow" }
+            { title: "Retailer Details", icon: Monitor, path: "/superadmin/retailers/details" },
+            { title: "Share Rupiksha APP", icon: Share2, path: "/superadmin/retailers/share" },
+            { title: "Retailer Service Workflow", icon: Monitor, path: "/superadmin/retailers/workflow" }
         ]
     },
     {
-        title: "TRANSACTIONS", icon: Repeat, path: "/SuperAdmin/transactions",
+        title: "TRANSACTIONS", icon: Repeat, path: "/superadmin/transactions",
         submenu: [
-            { title: "SuperAdmin Receipt", icon: FileText, path: "/SuperAdmin/transactions/SuperAdmin-receipt" },
-            { title: "Retailer Receipt", icon: FileText, path: "/SuperAdmin/transactions/retailer-receipt" },
-            { title: "Add Money", icon: Wallet, path: "/SuperAdmin/transactions/add-money" },
-            { title: "Axis CDM Card", icon: Monitor, path: "/SuperAdmin/transactions/axis-cdm" },
-            { title: "Axis Card Mapping", icon: Percent, path: "/SuperAdmin/transactions/axis-mapping" }
+            { title: "SuperAdmin Receipt", icon: FileText, path: "/superadmin/transactions/superadmin-receipt" },
+            { title: "Retailer Receipt", icon: FileText, path: "/superadmin/transactions/retailer-receipt" },
+            { title: "Add Money", icon: Wallet, path: "/superadmin/transactions/add-money" },
+            { title: "Axis CDM Card", icon: Monitor, path: "/superadmin/transactions/axis-cdm" },
+            { title: "Axis Card Mapping", icon: Percent, path: "/superadmin/transactions/axis-mapping" }
         ]
     },
     {
-        title: "REPORTS", icon: FileBarChart, path: "/SuperAdmin/reports",
+        title: "REPORTS", icon: FileBarChart, path: "/superadmin/reports",
         submenu: [
-            { title: "Retailer Balance", icon: FileText, path: "/SuperAdmin/reports/retailer-balance" },
-            { title: "Payment Request", icon: Wallet, path: "/SuperAdmin/reports/payment-request" },
-            { title: "Purchase Report", icon: FileBarChart, path: "/SuperAdmin/reports/purchase" },
-            { title: "Charge Report", icon: Percent, path: "/SuperAdmin/reports/charges" },
-            { title: "Commission Report", icon: FileBarChart, path: "/SuperAdmin/reports/commission" },
-            { title: "AEPS Report", icon: Monitor, path: "/SuperAdmin/reports/aeps" },
-            { title: "DMT Report", icon: Monitor, path: "/SuperAdmin/reports/dmt" },
-            { title: "BBPS Report", icon: Monitor, path: "/SuperAdmin/reports/bbps" },
-            { title: "CMS Report", icon: FileText, path: "/SuperAdmin/reports/cms" },
+            { title: "Retailer Balance", icon: FileText, path: "/superadmin/reports/retailer-balance" },
+            { title: "Payment Request", icon: Wallet, path: "/superadmin/reports/payment-request" },
+            { title: "Purchase Report", icon: FileBarChart, path: "/superadmin/reports/purchase" },
+            { title: "Charge Report", icon: Percent, path: "/superadmin/reports/charges" },
+            { title: "Commission Report", icon: FileBarChart, path: "/superadmin/reports/commission" },
+            { title: "AEPS Report", icon: Monitor, path: "/superadmin/reports/aeps" },
+            { title: "DMT Report", icon: Monitor, path: "/superadmin/reports/dmt" },
+            { title: "BBPS Report", icon: Monitor, path: "/superadmin/reports/bbps" },
+            { title: "CMS Report", icon: FileText, path: "/superadmin/reports/cms" },
         ]
     },
-    { title: "PLAN & RATES", icon: Map, path: "/SuperAdmin/plans" },
-    { title: "INVOICE", icon: FileText, path: "/SuperAdmin/invoice" },
+    { title: "PLAN & RATES", icon: Map, path: "/superadmin/plans" },
+    { title: "INVOICE", icon: FileText, path: "/superadmin/invoice" },
     {
-        title: "ACCOUNTS", icon: Wallet, path: "/SuperAdmin/accounts",
+        title: "ACCOUNTS", icon: Wallet, path: "/superadmin/accounts",
         submenu: [
-            { title: "My Ledger", icon: FileText, path: "/SuperAdmin/accounts/my-ledger" },
-            { title: "Retailer Ledger", icon: Monitor, path: "/SuperAdmin/accounts/retailer-ledger" },
-            { title: "Commission Reports", icon: FileBarChart, path: "/SuperAdmin/accounts/commission" }
-        ]
-    },
-    {
-        title: "PROMOTIONS", icon: Percent, path: "/SuperAdmin/promotions",
-        submenu: [
-            { title: "Promotions", icon: Plus, path: "/SuperAdmin/promotions/list" },
-            { title: "Video / Pdf", icon: Monitor, path: "/SuperAdmin/promotions/assets" }
+            { title: "My Ledger", icon: FileText, path: "/superadmin/accounts/my-ledger" },
+            { title: "Retailer Ledger", icon: Monitor, path: "/superadmin/accounts/retailer-ledger" },
+            { title: "Commission Reports", icon: FileBarChart, path: "/superadmin/accounts/commission" }
         ]
     },
     {
-        title: "SUPPORT", icon: LifeBuoy, path: "/SuperAdmin/support",
+        title: "PROMOTIONS", icon: Percent, path: "/superadmin/promotions",
         submenu: [
-            { title: "Online New Retailers Lead", icon: MapPin, path: "/SuperAdmin/support/leads" },
-            { title: "ECollect/OLP Complaints", icon: Repeat, path: "/SuperAdmin/support/complaints-ecollect" },
-            { title: "Retailer Complaint", icon: User, path: "/SuperAdmin/support/retailer-complaints" },
-            { title: "Training Videos", icon: Youtube, path: "/SuperAdmin/support/videos" }
+            { title: "Promotions", icon: Plus, path: "/superadmin/promotions/list" },
+            { title: "Video / Pdf", icon: Monitor, path: "/superadmin/promotions/assets" }
         ]
     },
-    { title: "OLD FY REPORTS", icon: History, path: "/SuperAdmin/old-reports" },
-    { title: "SETTINGS", icon: SettingsIcon, path: "/SuperAdmin/settings" }
+    {
+        title: "SUPPORT", icon: LifeBuoy, path: "/superadmin/support",
+        submenu: [
+            { title: "Online New Retailers Lead", icon: MapPin, path: "/superadmin/support/leads" },
+            { title: "ECollect/OLP Complaints", icon: Repeat, path: "/superadmin/support/complaints-ecollect" },
+            { title: "Retailer Complaint", icon: User, path: "/superadmin/support/retailer-complaints" },
+            { title: "Training Videos", icon: Youtube, path: "/superadmin/support/videos" }
+        ]
+    },
+    { title: "OLD FY REPORTS", icon: History, path: "/superadmin/old-reports" },
+    { title: "SETTINGS", icon: SettingsIcon, path: "/superadmin/settings" }
 ];

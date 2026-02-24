@@ -22,7 +22,7 @@ const SuperAdminPlaceholder = ({ title = 'Coming Soon' }) => {
                 </p>
             </div>
             <button
-                onClick={() => navigate('/SuperAdmin')}
+                onClick={() => navigate('/superadmin')}
                 className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 transition-all"
             >
                 <ArrowLeft size={14} />

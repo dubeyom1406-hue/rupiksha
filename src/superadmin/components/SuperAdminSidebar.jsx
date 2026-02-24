@@ -84,7 +84,7 @@ const SuperAdminSidebar = ({ showMobile, onClose }) => {
                 <nav className="flex-1 overflow-y-auto py-3 scrollbar-none space-y-0.5 px-2">
                     {/* Dashboard NavLink */}
                     <NavLink
-                        to="/SuperAdmin"
+                        to="/superadmin"
                         end
                         onClick={onClose}
                         className={({ isActive }) =>

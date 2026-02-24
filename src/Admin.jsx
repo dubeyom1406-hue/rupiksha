@@ -1262,7 +1262,7 @@ const Admin = () => {
 
     const handleLoginAsSuperAdmin = (sa) => {
         sharedDataService.setCurrentSuperAdmin(sa);
-        navigate('/SuperAdmin');
+        navigate('/superadmin');
     };
 
     const DistApprovalModal = () => (
@@ -1964,7 +1964,7 @@ const Admin = () => {
                                                                 <button
                                                                     onClick={() => {
                                                                         sessionStorage.setItem('superadmin_user', JSON.stringify(sa));
-                                                                        navigate('/SuperAdmin');
+                                                                        navigate('/superadmin');
                                                                     }}
                                                                     className="px-5 py-2.5 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                                                                 >

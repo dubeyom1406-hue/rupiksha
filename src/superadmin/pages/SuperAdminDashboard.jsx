@@ -232,7 +232,7 @@ const SuperAdminDashboard = () => {
                             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
                                 <h2 className="text-base font-black text-slate-900">Transaction History</h2>
                                 <button
-                                    onClick={() => navigate('/SuperAdmin/transactions/SuperAdmin-receipt')}
+                                    onClick={() => navigate('/superadmin/transactions/superadmin-receipt')}
                                     className="text-[10px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-widest flex items-center gap-1"
                                 >
                                     View All <ChevronRight size={12} />
@@ -279,7 +279,7 @@ const SuperAdminDashboard = () => {
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-base font-black text-slate-900">My Card</h2>
-                                <button onClick={() => navigate('/SuperAdmin/transactions/add-money')}
+                                <button onClick={() => navigate('/superadmin/transactions/add-money')}
                                     className="bg-slate-900 hover:bg-slate-700 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
                                     <Plus size={11} /> Add Card
                                 </button>
@@ -343,7 +343,7 @@ const SuperAdminDashboard = () => {
                                     Live Retailers
                                 </h2>
                                 <button
-                                    onClick={() => navigate('/SuperAdmin/retailers/details')}
+                                    onClick={() => navigate('/superadmin/retailers/details')}
                                     className="text-[10px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-widest flex items-center gap-1"
                                 >
                                     ALL <ChevronRight size={12} />
@@ -397,7 +397,7 @@ const SuperAdminDashboard = () => {
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-base font-black text-slate-900">My Goals</h2>
-                                <button onClick={() => navigate('/SuperAdmin/plans')}
+                                <button onClick={() => navigate('/superadmin/plans')}
                                     className="bg-slate-900 hover:bg-slate-700 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
                                     <Plus size={11} /> Add
                                 </button>
@@ -444,9 +444,9 @@ const SuperAdminDashboard = () => {
                             className="grid grid-cols-3 gap-3"
                         >
                             {[
-                                { label: 'Add Money', icon: Plus, path: '/SuperAdmin/transactions/add-money', color: '#6366f1' },
-                                { label: 'Reports', icon: TrendingUp, path: '/SuperAdmin/reports/commission', color: '#10b981' },
-                                { label: 'Retailers', icon: Users, path: '/SuperAdmin/retailers/details', color: '#f59e0b' },
+                                { label: 'Add Money', icon: Plus, path: '/superadmin/transactions/add-money', color: '#6366f1' },
+                                { label: 'Reports', icon: TrendingUp, path: '/superadmin/reports/commission', color: '#10b981' },
+                                { label: 'Retailers', icon: Users, path: '/superadmin/retailers/details', color: '#f59e0b' },
                             ].map((a, i) => (
                                 <motion.button key={i} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
                                     onClick={() => navigate(a.path)}

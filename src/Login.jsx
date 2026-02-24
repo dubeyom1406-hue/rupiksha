@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,7 +12,7 @@ import {
 import logo from './assets/rupiksha_logo.png';
 import { dataService, BACKEND_URL } from './services/dataService';
 import DistributorLogin from './distributor/components/DistributorLogin';
-import SuperAdminLogin from './superadmin/components/SuperAdminLogin';
+import SuperAdminLogin from './superadmin/components/superadminLogin';
 
 const INDIAN_STATES = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
@@ -25,7 +25,7 @@ const INDIAN_STATES = [
 
 const TRANSLATIONS = {
     en: {
-        income_calc: "₹ INCOME CALCULATOR",
+        income_calc: "? INCOME CALCULATOR",
         welcome: "WELCOME TO RUPIKSHA",
         login_btn: "Login",
         register_btn: "Register",
@@ -49,7 +49,7 @@ const TRANSLATIONS = {
         dob_label: "Date of Birth",
         dob_note: "Note: Enter the Date of Birth as per RUPIKSHA record. Format should be DD/MM/YYYY",
         get_app: "GET RUPIKSHA APP",
-        rights: "© RuPiKsha Digital Services Private Limited | All rights reserved.",
+        rights: "� RuPiKsha Digital Services Private Limited | All rights reserved.",
         chat_with_us: "CHAT WITH US NOW!",
         english: "English",
         hindi: "Hindi",
@@ -71,50 +71,50 @@ const TRANSLATIONS = {
         mobile_placeholder: "Enter Mobile Number"
     },
     hi: {
-        income_calc: "₹ आय कैलकुलेटर",
-        welcome: "रुपिक्षा में आपका स्वागत है",
-        login_btn: "लॉगिन",
-        register_btn: "रजिस्टर",
-        submit_btn: "सबमिट",
-        forgot_password: "पासवर्ड भूल गए?",
-        username_placeholder: "मोबाइल नंबर",
-        password_placeholder: "पासवर्ड",
-        captcha_placeholder: "कैप्चा दर्ज करें",
-        remember_me: "मुझे याद रखें",
-        new_user: "नए उपयोगकर्ता?",
-        create_account_link: "नि: शुल्क खाता बनाएं।",
-        already_registered: "पहले से पंजीकृत हैं?",
-        log_in_link: "लॉगिन करें।",
-        create_account_title: "एक नि: शुल्क खाता बनाएं",
-        register_p: "आज ही अपना मुफ़्त खाता प्राप्त करें और लेनदेन शुरू करें",
-        mobile_label: "मोबाइल नंबर",
-        name_label: "पूरा नाम",
-        email_label: "ईमेल",
-        state_label: "कृपया अपना राज्य चुनें",
-        lang_label: "कृपया अपनी पसंदीदा भाषा चुनें",
-        dob_label: "जन्म तिथि",
-        dob_note: "नोट: रुपिक्षा रिकॉर्ड के अनुसार जन्म तिथि दर्ज करें। प्रारूप DD/MM/YYYY होना चाहिए",
-        get_app: "रुपिक्षा ऐप प्राप्त करें",
-        rights: "© रुपिक्षा डिजिटल सर्विसेज प्राइवेट लिमिटेड | सर्वाधिकार सुरक्षित।",
-        chat_with_us: "अभी हमसे चैट करें!",
+        income_calc: "? ?? ?????????",
+        welcome: "???????? ??? ???? ?????? ??",
+        login_btn: "?????",
+        register_btn: "???????",
+        submit_btn: "?????",
+        forgot_password: "??????? ??? ???",
+        username_placeholder: "?????? ????",
+        password_placeholder: "???????",
+        captcha_placeholder: "?????? ???? ????",
+        remember_me: "???? ??? ????",
+        new_user: "?? ???????????",
+        create_account_link: "??: ????? ???? ??????",
+        already_registered: "???? ?? ??????? ????",
+        log_in_link: "????? ?????",
+        create_account_title: "?? ??: ????? ???? ?????",
+        register_p: "?? ?? ???? ?????? ???? ??????? ???? ?? ?????? ???? ????",
+        mobile_label: "?????? ????",
+        name_label: "???? ???",
+        email_label: "????",
+        state_label: "????? ???? ????? ?????",
+        lang_label: "????? ???? ??????? ???? ?????",
+        dob_label: "???? ????",
+        dob_note: "???: ???????? ??????? ?? ?????? ???? ???? ???? ????? ??????? DD/MM/YYYY ???? ?????",
+        get_app: "???????? ?? ??????? ????",
+        rights: "� ???????? ?????? ???????? ???????? ??????? | ?????????? ?????????",
+        chat_with_us: "??? ???? ??? ????!",
         english: "English",
-        hindi: "हिंदी",
-        select_lang: "भाषा चुनें",
-        back_to_login: "लॉगिन पर वापस जाएं?",
-        agreement: "मैं व्हाट्सएप, RCS सेवा, मोबाइल और ईमेल पर संचार प्राप्त करने के लिए सहमत हूं।",
-        success_reg: "पंजीकरण सफल! लॉगिन किया जा रहा है...",
-        success_login: "लॉगिन सफल!",
-        otp_title: "मोबाइल ओटीपी सत्यापित करें",
-        otp_placeholder: "6-अंकीय ओटीपी दर्ज करें",
-        otp_sent: "ओटीपी आपके पंजीकृत मोबाइल नंबर पर भेज दिया गया है",
-        verify_otp_btn: "सत्यापित करें और लॉगिन करें",
-        resend_otp: "मोबाइल ओटीपी पुन: भेजें",
-        invalid_otp: "अमान्य ओटीपी। कृपया पुन: प्रयास करें।",
-        cred_error: "अमान्य क्रेडेंशियल।",
-        login_by_password: "पासवर्ड लॉगिन",
-        login_by_otp: "ओटीपी लॉगिन",
-        user_not_found: "उपयोगकर्ता नहीं मिला। कृपया पंजीकरण करें।",
-        mobile_placeholder: "मोबाइल नंबर दर्ज करें"
+        hindi: "?????",
+        select_lang: "???? ?????",
+        back_to_login: "????? ?? ???? ?????",
+        agreement: "??? ?????????, RCS ????, ?????? ?? ???? ?? ????? ??????? ???? ?? ??? ???? ????",
+        success_reg: "??????? ???! ????? ???? ?? ??? ??...",
+        success_login: "????? ???!",
+        otp_title: "?????? ????? ???????? ????",
+        otp_placeholder: "6-????? ????? ???? ????",
+        otp_sent: "????? ???? ??????? ?????? ???? ?? ??? ???? ??? ??",
+        verify_otp_btn: "???????? ???? ?? ????? ????",
+        resend_otp: "?????? ????? ???: ?????",
+        invalid_otp: "?????? ?????? ????? ???: ?????? ?????",
+        cred_error: "?????? ????????????",
+        login_by_password: "??????? ?????",
+        login_by_otp: "????? ?????",
+        user_not_found: "?????????? ???? ????? ????? ??????? ?????",
+        mobile_placeholder: "?????? ???? ???? ????"
     }
 };
 
@@ -136,7 +136,7 @@ const Login = () => {
         return TRANSLATIONS[lang][key] || key;
     };
 
-    // portal: 'select' → show portal chooser, 'retailer' → retailer login, 'distributor' → distributor login
+    // portal: 'select' ? show portal chooser, 'retailer' ? retailer login, 'distributor' ? distributor login
     const [portal, setPortal] = useState('select');
     const [view, setView] = useState('login'); // 'login', 'register', 'forgot'
     // const [lang, setLang] = useState('en'); // Removed local state
@@ -166,7 +166,7 @@ const Login = () => {
             title: "Never-Before Offer",
             subtitle: "100% FREE IRCTC Rail Agent ID",
             desc: "Valid for 1 Full Year | OTP-Based Activation | Instant Activation",
-            action: "ACTIVATE TODAY – LIMITED TIME OFFER",
+            action: "ACTIVATE TODAY � LIMITED TIME OFFER",
             image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=1000"
         },
         {
@@ -313,7 +313,7 @@ const Login = () => {
         setCaptcha(result);
     };
 
-    // ── Portal Selection Screen ────────────────────────────────────────────
+    // -- Portal Selection Screen --------------------------------------------
     if (portal === 'select') {
         return (
             <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center font-['Montserrat',sans-serif] relative overflow-hidden py-16 px-4">
@@ -450,7 +450,7 @@ const Login = () => {
                     {/* Footer Copyright */}
                     <div className="mt-24 md:mt-32 text-center opacity-30">
                         <p className="text-white text-[10px] font-black uppercase tracking-[0.8em]">
-                            © 2026 RuPiKsha Digital Services Pvt. Ltd.
+                            � 2026 RuPiKsha Digital Services Pvt. Ltd.
                         </p>
                     </div>
                 </motion.div>
@@ -458,7 +458,7 @@ const Login = () => {
         );
     }
 
-    // ── Distributor Login Screen ─────────────────────────────────────────────
+    // -- Distributor Login Screen ---------------------------------------------
     if (portal === 'distributor') {
         return (
             <div className="min-h-screen bg-[#f8fafc] flex flex-col font-['Montserrat',sans-serif]">
@@ -468,7 +468,7 @@ const Login = () => {
                         <span className="text-[8px] font-bold text-slate-400 -mt-1 uppercase tracking-tighter self-start">Making Life Simple</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-amber-200">Distributor Portal — B Panel</span>
+                        <span className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-amber-200">Distributor Portal � B Panel</span>
                         <button
                             onClick={() => setPortal('select')}
                             className="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider flex items-center gap-1"
@@ -487,7 +487,7 @@ const Login = () => {
                             </h2>
                             <div className="bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
                                 <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
-                                    B Panel — Distributor Access
+                                    B Panel � Distributor Access
                                 </div>
                                 <div className="p-8">
                                     <DistributorLogin />
@@ -536,7 +536,7 @@ const Login = () => {
         );
     }
 
-    // ── SuperAdmin Login Screen ─────────────────────────────────────────────
+    // -- SuperAdmin Login Screen ---------------------------------------------
     if (portal === 'superadmin') {
         return (
             <div className="min-h-screen bg-[#f0f4ff] flex flex-col font-['Montserrat',sans-serif]">
@@ -546,7 +546,7 @@ const Login = () => {
                         <span className="text-[8px] font-bold text-slate-400 -mt-1 uppercase tracking-tighter self-start">Making Life Simple</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-indigo-200">Control Panel — SuperAdmin</span>
+                        <span className="bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-indigo-200">Control Panel � SuperAdmin</span>
                         <button
                             onClick={() => setPortal('select')}
                             className="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider flex items-center gap-1"
@@ -565,7 +565,7 @@ const Login = () => {
                             </h2>
                             <div className="bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
                                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
-                                    System Control — Super Distributor Access
+                                    System Control � Super Distributor Access
                                 </div>
                                 <div className="p-8">
                                     <SuperAdminLogin />
@@ -616,14 +616,14 @@ const Login = () => {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] flex flex-col font-['Montserrat',sans-serif]">
-            {/* Header — same style as Distributor portal */}
+            {/* Header � same style as Distributor portal */}
             <header className="bg-white px-4 md:px-8 py-2 flex items-center justify-between shadow-sm border-b border-slate-100 sticky top-0 z-50">
                 <div className="flex flex-col items-center cursor-pointer" onClick={() => setView('login')}>
                     <img src={logo} alt="RUPIKSHA" className="h-10 md:h-12 object-contain" />
                     <span className="text-[8px] font-bold text-slate-400 -mt-1 uppercase tracking-tighter self-start">Making Life Simple</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-blue-200">Retailer Portal — A Panel</span>
+                    <span className="bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-blue-200">Retailer Portal � A Panel</span>
                     <button
                         onClick={() => setPortal('select')}
                         className="text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider flex items-center gap-1"
@@ -642,7 +642,7 @@ const Login = () => {
                         </h2>
                         <div className="bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
                             <div className="bg-gradient-to-r from-[#1e40af] to-[#3b82f6] text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
-                                {view === 'login' ? 'A Panel — Retailer Access' :
+                                {view === 'login' ? 'A Panel � Retailer Access' :
                                     view === 'register' ? t('create_account_title') : t('forgot_password')}
                             </div>
 
@@ -700,7 +700,7 @@ const Login = () => {
                                                 </button>
                                                 <button type="button" onClick={() => { setLoginStep('credentials'); setEnteredOtp(''); }}
                                                     className="w-full text-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase tracking-wider">
-                                                    ← {t('back_to_login')}
+                                                    ? {t('back_to_login')}
                                                 </button>
                                             </div>
                                         ) : (
@@ -856,7 +856,7 @@ const Login = () => {
                                         </button>
                                         <button type="button" onClick={() => setView('login')}
                                             className="w-full text-center text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider">
-                                            ← {t('already_registered')} {t('log_in_link')}
+                                            ? {t('already_registered')} {t('log_in_link')}
                                         </button>
                                     </motion.form>
                                 ) : (
@@ -896,7 +896,7 @@ const Login = () => {
                                         </button>
                                         <button type="button" onClick={() => setView('login')}
                                             className="w-full text-center text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider">
-                                            ← {t('back_to_login')}
+                                            ? {t('back_to_login')}
                                         </button>
                                     </motion.form>
                                 )}
@@ -905,7 +905,7 @@ const Login = () => {
                     </div>
                 </div>
 
-                {/* Right: Retailer Promo Panel — mirrors exact Distributor right panel style */}
+                {/* Right: Retailer Promo Panel � mirrors exact Distributor right panel style */}
                 <div className="hidden md:flex flex-1 bg-gradient-to-br from-[#0c1a3a] via-[#1e40af] to-[#0c1a3a] relative overflow-hidden items-center justify-center p-8 lg:p-14">
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/10 blur-[150px] rounded-full -mr-48 -mt-48" />
@@ -923,14 +923,14 @@ const Login = () => {
                         <div className="space-y-2">
                             <span className="text-[9px] font-black text-blue-300 uppercase tracking-widest">Retailer A Panel</span>
                             <h3 className="text-3xl font-black tracking-tight">Grow Your<br />Business Today</h3>
-                            <p className="text-white/60 text-sm font-bold">Access AEPS, DMT, BBPS, Travel &amp; 20+ services — all on one powerful platform.</p>
+                            <p className="text-white/60 text-sm font-bold">Access AEPS, DMT, BBPS, Travel &amp; 20+ services � all on one powerful platform.</p>
                         </div>
                         {[
                             'AEPS & Micro ATM Services',
-                            'BBPS — Utility Bill Payments',
-                            'DMT — Money Transfer',
+                            'BBPS � Utility Bill Payments',
+                            'DMT � Money Transfer',
                             'Travel Booking & Insurance',
-                            '24×7 Dedicated Support',
+                            '24�7 Dedicated Support',
                         ].map((f, i) => (
                             <div key={i} className="flex items-center gap-3 text-left bg-white/5 border border-white/10 rounded-xl px-4 py-3">
                                 <div className="w-5 h-5 bg-blue-400 rounded-full flex items-center justify-center shrink-0">

@@ -57,8 +57,8 @@ import DistributorPlaceholder from './distributor/pages/DistributorPlaceholder';
 import DistributorPlans from './distributor/pages/DistributorPlans';
 
 // ── SuperAdmin Panel ────────────────────────────────────────────────────────
-import SuperAdminLayout from './superadmin/components/SuperAdminLayout';
-import SuperAdminDashboard from './superadmin/pages/SuperAdminDashboard';
+import SuperAdminLayout from './superadmin/components/superadminLayout';
+import SuperAdminDashboard from './superadmin/pages/superadminDashboard';
 import SuperAdminDistributors from './superadmin/pages/Distributors';
 import SuperAdminRetailers from './superadmin/pages/Retailers';
 import SuperAdminAddMoney from './superadmin/pages/AddMoney';
@@ -89,10 +89,10 @@ import {
   TrainingVideos as SuperAdminTrainingVideos
 } from './superadmin/pages/Support';
 import SuperAdminOldReports from './superadmin/pages/OldReports';
-import SuperAdminPlaceholder from './superadmin/pages/SuperAdminPlaceholder';
-import SuperAdminPlans from './superadmin/pages/SuperAdminPlans';
+import SuperAdminPlaceholder from './superadmin/pages/superadminPlaceholder';
+import SuperAdminPlans from './superadmin/pages/superadminPlans';
 import SuperAdminApprovals from './superadmin/pages/Approvals';
-import SuperAdminSettings from './superadmin/pages/SuperAdminSettings';
+import SuperAdminSettings from './superadmin/pages/superadminSettings';
 
 import AddMoneyComponent from './retailer/components/banking/AddMoney';
 
@@ -189,7 +189,7 @@ function App() {
           <Route path="/superadmin-plans" element={<SuperAdminPlans />} />
 
           {/* ── SuperAdmin Panel (Master Panel) ── */}
-          <Route path="/SuperAdmin" element={<SuperAdminLayout />}>
+          <Route path="/superadmin" element={<SuperAdminLayout />}>
             <Route index element={<SuperAdminDashboard />} />
 
             {/* Distributors & Retailers */}
@@ -202,7 +202,7 @@ function App() {
 
             {/* Transactions */}
             <Route path="transactions" element={<SuperAdminReceipt />} />
-            <Route path="transactions/SuperAdmin-receipt" element={<SuperAdminReceipt />} />
+            <Route path="transactions/superadmin-receipt" element={<SuperAdminReceipt />} />
             <Route path="transactions/retailer-receipt" element={<SuperAdminRetailerReceipt />} />
             <Route path="transactions/add-money" element={<SuperAdminAddMoney />} />
             <Route path="transactions/axis-cdm" element={<SuperAdminPlaceholder title="Axis CDM Card" />} />
