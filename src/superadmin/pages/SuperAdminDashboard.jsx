@@ -99,8 +99,8 @@ const SuperAdminDashboard = () => {
 
     useEffect(() => {
         load();
-        window.addEventListener('SuperAdminDataUpdated', load);
-        return () => window.removeEventListener('SuperAdminDataUpdated', load);
+        window.addEventListener('superadminDataUpdated', load);
+        return () => window.removeEventListener('superadminDataUpdated', load);
     }, []);
 
     const active = retailers.filter(r => r.status === 'Approved');

@@ -57,8 +57,8 @@ import DistributorPlaceholder from './distributor/pages/DistributorPlaceholder';
 import DistributorPlans from './distributor/pages/DistributorPlans';
 
 // ── SuperAdmin Panel ────────────────────────────────────────────────────────
-import SuperAdminLayout from './superadmin/components/superadminLayout';
-import SuperAdminDashboard from './superadmin/pages/superadminDashboard';
+import SuperAdminLayout from './superadmin/components/SuperAdminLayout';
+import SuperAdminDashboard from './superadmin/pages/SuperAdminDashboard';
 import SuperAdminDistributors from './superadmin/pages/Distributors';
 import SuperAdminRetailers from './superadmin/pages/Retailers';
 import SuperAdminAddMoney from './superadmin/pages/AddMoney';
@@ -89,10 +89,10 @@ import {
   TrainingVideos as SuperAdminTrainingVideos
 } from './superadmin/pages/Support';
 import SuperAdminOldReports from './superadmin/pages/OldReports';
-import SuperAdminPlaceholder from './superadmin/pages/superadminPlaceholder';
-import SuperAdminPlans from './superadmin/pages/superadminPlans';
+import SuperAdminPlaceholder from './superadmin/pages/SuperAdminPlaceholder';
+import SuperAdminPlans from './superadmin/pages/SuperAdminPlans';
 import SuperAdminApprovals from './superadmin/pages/Approvals';
-import SuperAdminSettings from './superadmin/pages/superadminSettings';
+import SuperAdminSettings from './superadmin/pages/SuperAdminSettings';
 
 import AddMoneyComponent from './retailer/components/banking/AddMoney';
 
