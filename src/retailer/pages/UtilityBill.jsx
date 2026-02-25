@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { dataService } from '../../services/dataService';
 import { BILL_CATEGORIES as BILL_CATEGORIES_DATA } from './utilityData';
+import { initSpeech, announceSuccess, announceFailure, announceProcessing, speak, announceError, announceWarning, announceGrandSuccess } from '../../services/speechService';
 
 /* ─────────────────────── CONSTANTS ─────────────────────── */
 const BILL_FETCH_API = "/api/bill-fetch";
@@ -285,6 +286,7 @@ export default function UtilityBill() {
     const [fetching, setFetching] = useState(false);
     const [paying, setPaying] = useState(false);
     const [status, setStatus] = useState(null);
+    const [dob, setDob] = useState(''); // Added for Insurance
     const [txId, setTxId] = useState('');
     const [showReceipt, setShowReceipt] = useState(false);
     const [backendStatus, setBackendStatus] = useState('unknown'); // 'online' | 'offline' | 'unknown'
@@ -301,7 +303,7 @@ export default function UtilityBill() {
     }, []);
 
 
-    /* ── Auto-fetch bill when consumer no ≥ 6 ── */
+    /* ── Fetching logic ── */
     useEffect(() => {
         // Force mobile to be empty on first category selection to avoid autofill issues
         if (selectedCat && !consumerNo && !billMobile) {
@@ -309,21 +311,10 @@ export default function UtilityBill() {
         }
     }, [selectedCat]);
 
-    /* ── Auto-fetch bill when consumer no ≥ 6 ── */
+    // Cleanup timer on unmount
     useEffect(() => {
-        // Check for valid biller and opcode
-        const hasValidOpcode = biller && typeof biller === 'object' && biller.opcode &&
-            biller.opcode.toString().toUpperCase() !== 'NONE' &&
-            biller.opcode.toString().trim() !== '';
-
-        if (!hasValidOpcode || consumerNo.length < 6 || billMobile.length < 10) {
-            setFetchedBill(null);
-            return;
-        }
-        clearTimeout(autoTimer.current);
-        autoTimer.current = setTimeout(() => doFetch(), 900);
         return () => clearTimeout(autoTimer.current);
-    }, [consumerNo, biller, billMobile]);
+    }, []);
 
 
     const catData = selectedCat ? CATEGORIES.find(c => c.id === selectedCat) : null;
@@ -364,16 +355,31 @@ export default function UtilityBill() {
         setFetchedBill(null);
         setStatus(null);
         try {
-            const url = `${BILL_FETCH_API}?biller=${encodeURIComponent(biller.name || biller)}&consumerNo=${encodeURIComponent(consumerNo)}&opcode=${encodeURIComponent(opCode)}&subDiv=${encodeURIComponent(subDiv || '')}&mobile=${userMobile}`;
-            console.log("[BBPS] Fetching from:", url);
-            const res = await fetch(url);
+            initSpeech();
+            announceProcessing(`आपका ${biller.name || 'बिल'} फेच हो रहा है, कृपया प्रतीक्षा करें।`);
+            console.log("[BBPS] Fetching from:", BILL_FETCH_API);
+            const res = await fetch(BILL_FETCH_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    biller: biller.name || biller,
+                    consumerNo,
+                    opcode: opCode,
+                    category: selectedCat, // Added missing category
+                    subDiv: subDiv || '',
+                    dob: dob || '',
+                    mobile: userMobile
+                })
+            });
             const data = await res.json();
 
             if (data.success && data.bill) {
                 setFetchedBill(data.bill);
                 setStep('fetched');
+                speak(`बिल की जानकारी मिल गई है। ${data.bill.custName || 'ग्राहक'} के लिए ${data.bill.amount} रुपये का बिल बकाया है।`, 'hi-IN');
             } else {
                 const errMsg = data.message || '';
+                announceError(errMsg || 'बिल फेच करने में समस्या हुई है।');
                 const matchedErr = Object.keys(VENUS_ERRORS).find(k => errMsg.toUpperCase().includes(k));
                 setStatus({
                     type: 'error',
@@ -395,7 +401,14 @@ export default function UtilityBill() {
         setPaying(true);
         setStatus(null);
         const user = dataService.getCurrentUser();
+        if (!user) {
+            setStatus({ type: 'error', message: '⚠️ Session expired. Please login again.' });
+            setPaying(false);
+            return;
+        }
         try {
+            initSpeech();
+            announceProcessing("आपका पेमेंट प्रोसेस हो रहा है। कृपया पेज रिफ्रेश न करें।");
             const response = await fetch(BILL_PAY_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -406,6 +419,7 @@ export default function UtilityBill() {
                     category: selectedCat,
                     opcode: biller.opcode || 'UBE',
                     subDiv,
+                    dob, // Pass DOB
                     mobile: billMobile,
                     orderId: fetchedBill.orderId
                 })
@@ -440,11 +454,17 @@ export default function UtilityBill() {
                     }
                 );
 
+                announceGrandSuccess(
+                    `आपका ₹${fetchedBill.amount} का ${biller.name} बिल पेमेंट सफल हो गया।`,
+                    `धन्यवाद! आपकी ट्रांजैक्शन आईडी ${data.txid || 'सफल'} है।`
+                );
+
                 setStep('success');
                 setShowReceipt(true);
             } else {
                 const errMsg = data.message || '';
                 const errCode = data.code || '';
+                announceError(errMsg || 'पेमेंट फेल हो गया है।');
                 const matchedErr = VENUS_ERRORS[errCode] || Object.keys(VENUS_ERRORS).find(k => errMsg.toUpperCase().includes(k));
 
                 setStatus({
@@ -470,6 +490,7 @@ export default function UtilityBill() {
         setSubDiv('');
         setBillerSearch('');
         setConsumerNo('');
+        setDob(''); // Clear DOB
         setFetchedBill(null);
         setStatus(null);
         setShowReceipt(false);
@@ -706,6 +727,40 @@ export default function UtilityBill() {
                                             </div>
                                         </div>
 
+                                        {/* Date of Birth - Only for Insurance */}
+                                        {selectedCat === 'insurance' && (
+                                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
+                                                    <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth (DDMMYYYY)
+                                                </label>
+                                                <div className="relative">
+                                                    <Calendar size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        value={dob}
+                                                        onChange={e => {
+                                                            let val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                                                            // Auto-format to DD-MM-YYYY
+                                                            let formatted = val;
+                                                            if (val.length > 2 && val.length <= 4) {
+                                                                formatted = `${val.slice(0, 2)}-${val.slice(2)}`;
+                                                            } else if (val.length > 4) {
+                                                                formatted = `${val.slice(0, 2)}-${val.slice(2, 4)}-${val.slice(4)}`;
+                                                            }
+                                                            setDob(formatted);
+
+                                                            if (formatted.length === 10 && consumerNo.length >= 6 && billMobile.length === 10) {
+                                                                clearTimeout(autoTimer.current);
+                                                                autoTimer.current = setTimeout(() => { doFetch(); }, 500);
+                                                            }
+                                                        }}
+                                                        placeholder="DD-MM-YYYY (e.g. 15-08-1947)"
+                                                        className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 text-slate-900 font-bold text-sm outline-none focus:border-emerald-400 bg-slate-50 focus:bg-white transition-all border-emerald-50"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1">Must be exactly 10 characters in DD-MM-YYYY format.</p>
+                                            </motion.div>
+                                        )}
+
                                         {/* SubDiv Field if exists */}
                                         {biller && biller.subDivLabel && (
                                             <div>
@@ -733,14 +788,19 @@ export default function UtilityBill() {
 
                                         <AnimatePresence><Toast status={status} onClose={() => setStatus(null)} /></AnimatePresence>
 
-                                        {/* Fetch Button (Manual fallback) */}
-                                        {biller && typeof biller === 'object' && biller.opcode && consumerNo.length >= 6 && billMobile.length === 10 && !fetchedBill && (
-                                            <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                        {/* Fetch Button (Required Manual Click) */}
+                                        {biller && typeof biller === 'object' && biller.opcode && consumerNo.length >= 6 && billMobile.length === 10 && (selectedCat === 'insurance' ? dob.length === 10 : true) && !fetchedBill && (
+                                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                                                 onClick={doFetch} disabled={fetching}
                                                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                                                className="w-full py-4 rounded-xl text-white font-black text-sm uppercase tracking-widest disabled:opacity-60 flex items-center justify-center gap-2"
-                                                style={{ background: catData.bg, boxShadow: `0 6px 25px ${catData.color}45` }}>
-                                                {fetching ? <><RefreshCw size={17} className="animate-spin" /> Fetching...</> : <>Fetch Bill Details <ArrowRight size={17} /></>}
+                                                className="w-full py-4 mt-4 rounded-xl text-white font-black text-sm uppercase tracking-widest disabled:opacity-60 flex items-center justify-center gap-2 group overflow-hidden relative"
+                                                style={{ background: catData.bg, boxShadow: `0 12px 30px ${catData.color}50` }}>
+                                                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                                {fetching ? (
+                                                    <><RefreshCw size={17} className="animate-spin" /> Verifying Customer Details...</>
+                                                ) : (
+                                                    <>Fetch & Verify Bill <ArrowRight size={17} className="group-hover:translate-x-1 transition-transform" /></>
+                                                )}
                                             </motion.button>
                                         )}
 
@@ -804,20 +864,29 @@ export default function UtilityBill() {
 
                                     {/* Details Grid */}
                                     <div className="bg-white px-5 py-5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Verification</p>
+                                            <button onClick={() => speak(`ग्राहक का नाम: ${fetchedBill.custName || 'उपलब्ध नहीं'}, उपभोक्ता नंबर: ${consumerNo}, बकाया राशि: ${fetchedBill.amount} रुपये।`, 'hi-IN')}
+                                                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 hover:bg-blue-100 hover:text-blue-600 transition-all">
+                                                <Activity size={12} className="text-blue-500" /> Listen Details
+                                            </button>
+                                        </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                             {[
-                                                { label: 'Customer Name', value: fetchedBill.custName, color: 'text-slate-900', icon: User },
+                                                { label: 'Customer Name', value: fetchedBill.custName || 'Not Available', color: 'text-slate-900', icon: UserIcon },
                                                 { label: 'Consumer No.', value: consumerNo, color: 'text-slate-700', icon: Hash },
-                                                { label: 'Bill Number', value: fetchedBill.billNo, color: 'text-slate-700', icon: Receipt },
+                                                { label: 'Bill Date / ID', value: fetchedBill.billNo || fetchedBill.orderId || 'N/A', color: 'text-slate-700', icon: Receipt },
                                                 { label: 'Amount Due', value: `₹${fetchedBill.amount?.toLocaleString('en-IN')}`, color: 'text-red-600', icon: Banknote, big: true },
                                             ].map((row, i) => (
-                                                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
-                                                    className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                                    <div className="flex items-center gap-1 mb-1">
-                                                        <row.icon size={10} className="text-slate-400" />
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{row.label}</p>
+                                                <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i, type: 'spring' }}
+                                                    className="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100/50 hover:border-blue-100 transition-colors group">
+                                                    <div className="flex items-center gap-1.5 mb-2">
+                                                        <div className="p-1.5 rounded-lg bg-white shadow-sm group-hover:bg-blue-50 transition-colors">
+                                                            <row.icon size={12} className="text-slate-500" />
+                                                        </div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{row.label}</p>
                                                     </div>
-                                                    <p className={`font-black ${row.big ? 'text-2xl' : 'text-sm'} ${row.color} break-all`}>{row.value}</p>
+                                                    <p className={`font-black ${row.big ? 'text-2xl' : 'text-[13px]'} ${row.color} break-all leading-tight`}>{row.value}</p>
                                                 </motion.div>
                                             ))}
                                         </div>

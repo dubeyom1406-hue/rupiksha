@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import SuperAdminSidebar from './superadminSidebar';
-import SuperAdminTopBar from './superadminTopBar';
+import SuperAdminSidebar from './SuperAdminSidebar';
+import SuperAdminTopBar from './SuperAdminTopBar';
 import { sharedDataService } from '../../services/sharedDataService';
 
 const SuperAdminLayout = () => {

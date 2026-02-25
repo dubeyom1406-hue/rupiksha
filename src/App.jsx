@@ -14,6 +14,8 @@ import MATM from './retailer/pages/MATM';
 import Admin from './Admin';
 import AdminLogin from './AdminLogin';
 import Home from './Home';
+import About from './About';
+import Contact from './Contact';
 import RetailerDetails from './components/admin/RetailerDetails';
 import './App.css';
 
@@ -103,6 +105,8 @@ function App() {
         <Routes>
           {/* ── Shared Landing & Portal Selector ── */}
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/portal" element={<Login />} />
           <Route path="/login" element={<Login />} />
 

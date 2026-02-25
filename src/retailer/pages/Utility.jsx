@@ -258,7 +258,9 @@ function MobileTab() {
     const filteredPlans = filter === 'All' ? plans : plans.filter(p => p.type === filter);
 
     const OP_COLORS = { Airtel: '#e40000', Jio: '#003087', Vi: '#c300ff', BSNL: '#ff8800' };
+    const OP_CODES = { Airtel: 'ATL', Jio: 'JRE', Vi: 'VDF', BSNL: 'BNT' };
     const opColor = OP_COLORS[operator] || NAVY;
+    const opCode = OP_CODES[operator] || operator;
 
     const handleRecharge = async () => {
         const amount = selectedPlan ? selectedPlan.amount : customAmount;
@@ -270,7 +272,7 @@ function MobileTab() {
             initSpeech(); announceProcessing("रिचार्ज प्रोसेस हो रहा है।");
             const res = await fetch(RECHARGE_API, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile, operator, circle, amount, serviceType: 'MOBILE' })
+                body: JSON.stringify({ mobile, operator: opCode, circle, amount, serviceType: 'MOBILE' })
             });
             const result = await res.json();
             if (result.success) {
@@ -459,9 +461,10 @@ function DthTab() {
         setLoading(true); setStatus(null);
         try {
             initSpeech(); announceProcessing("डीटीएच रिचार्ज हो रहा है।");
+            const opCode = DTH_PROVIDERS[provider]?.opcode || provider;
             const res = await fetch(RECHARGE_API, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile: subscriberId, operator: provider, amount: selectedPlan.amount, serviceType: 'DTH' })
+                body: JSON.stringify({ mobile: subscriberId, operator: opCode, amount: selectedPlan.amount, serviceType: 'DTH' })
             });
             const result = await res.json();
             if (result.success) {
@@ -584,6 +587,7 @@ function BillTab() {
     const [fetching, setFetching] = useState(false);
     const [paying, setPaying] = useState(false);
     const [status, setStatus] = useState(null);
+    const [dob, setDob] = useState(''); // Added for Insurance
     const [showSuccess, setShowSuccess] = useState(false);
     const autoTimer = React.useRef(null);
 
@@ -598,17 +602,30 @@ function BillTab() {
 
     const doFetch = async () => {
         // ── Validate opcode before sending to Venus API ──
-        const opCode = biller && typeof biller === 'object' ? biller.opcode : null;
-        if (!opCode || opCode === 'undefined' || opCode.trim() === '') {
+        const b = typeof biller === 'object' ? biller : null;
+        const opCode = b?.opcode;
+
+        if (!opCode) {
             setFetchError(true);
-            setStatus({ type: 'error', message: '⚠️ This biller does not support online bill fetch. Please visit the biller\'s website directly.' });
+            setStatus({ type: 'error', message: `⚠️ Please select a valid ${category?.label} provider from the list.` });
             return;
         }
         setFetching(true); setFetchedBill(null); setFetchError(false); setStatus(null);
         try {
-            const billerName = biller.name || biller;
-            const url = `${BILL_FETCH_API}?biller=${encodeURIComponent(billerName)}&consumerNo=${encodeURIComponent(consumerNo)}&opcode=${encodeURIComponent(opCode)}&subDiv=`;
-            const res = await fetch(url);
+            console.log("[BBPS] Fetching from:", BILL_FETCH_API);
+            const res = await fetch(BILL_FETCH_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    biller: biller?.name || biller,
+                    consumerNo,
+                    opcode: opCode,
+                    category: category?.id,
+                    subDiv: '',
+                    dob: dob, // Pass DOB
+                    mobile: dataService.getUser()?.mobile || '9999999999'
+                })
+            });
             if (!res.ok) throw new Error('Backend error');
             const data = await res.json();
             if (data.success && data.bill) {
@@ -626,13 +643,33 @@ function BillTab() {
     const payBill = async () => {
         setPaying(true); setStatus(null);
         const billerName = biller?.name || biller;
-        const billerOpcode = biller?.opcode || 'UBE';
+        const billerOpcode = biller?.opcode;
+
+        if (!billerOpcode) {
+            setStatus({ type: 'error', message: '❌ Invalid operator code. Please select your biller again.' });
+            setPaying(false);
+            return;
+        }
         try {
             initSpeech(); announceProcessing("बिल पेमेंट हो रहा है।");
-            await fetch(BILL_PAY_API, {
+            const res = await fetch(BILL_PAY_API, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ biller: billerName, consumerNo, amount: fetchedBill.amount, category: category?.id, opcode: billerOpcode })
+                body: JSON.stringify({
+                    biller: billerName,
+                    consumerNo,
+                    amount: fetchedBill.amount,
+                    category: category?.id,
+                    opcode: billerOpcode,
+                    dob: dob, // Pass DOB
+                    mobile: dataService.getUser()?.mobile || '9999999999'
+                })
             });
+            const result = await res.json();
+            if (!result.success) {
+                setStatus({ type: 'error', message: `❌ ${result.message || 'Payment failed'}` });
+                setPaying(false);
+                return;
+            }
         } catch (err) {
             console.error('Payment Error:', err);
         }
@@ -650,7 +687,7 @@ function BillTab() {
         return name.toLowerCase().includes(billerSearch.toLowerCase());
     });
 
-    const resetAll = () => { setShowSuccess(false); setFetchedBill(null); setConsumerNo(''); setBiller(null); setBillerSearch(''); setCategory(null); setStatus(null); };
+    const resetAll = () => { setShowSuccess(false); setFetchedBill(null); setConsumerNo(''); setDob(''); setBiller(null); setBillerSearch(''); setCategory(null); setStatus(null); };
 
     if (showSuccess) return (
         <GrandSuccessScreen
@@ -764,9 +801,45 @@ function BillTab() {
                                 <p className="text-[10px] text-amber-500 font-bold mt-1">⚠️ Online fetch not available for this biller</p>
                             )}
                         </div>
+
+                        {/* 📅 Date of Birth - MANDATORY for Insurance (LIC etc) */}
+                        {category?.id === 'insurance' && (
+                            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
+                                    <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth (DDMMYYYY)
+                                </label>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input value={dob}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                                            setDob(val);
+                                            if (val.length === 8 && consumerNo.length >= 6) {
+                                                clearTimeout(autoTimer.current);
+                                                autoTimer.current = setTimeout(() => { doFetch(); }, 500);
+                                            }
+                                        }}
+                                        placeholder="DDMMYYYY (e.g. 15081947)"
+                                        className="w-full pl-9 pr-4 py-3.5 rounded-xl border-2 border-slate-200 text-slate-900 font-bold text-sm outline-none focus:border-emerald-500 bg-emerald-50/20 transition-all border-emerald-100" />
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-1">Note: Enter DOB in DDMMYYYY format for Insurance fetch.</p>
+                            </motion.div>
+                        )}
                     </div>
 
                     <AnimatePresence><Toast status={status} onClose={() => setStatus(null)} /></AnimatePresence>
+
+                    {/* Manual Fetch Button for Insurance if auto-fetch is slow */}
+                    {category?.id === 'insurance' && !fetchedBill && (
+                        <motion.button
+                            onClick={doFetch}
+                            disabled={fetching || consumerNo.length < 6 || dob.length < 8}
+                            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                            className="w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs uppercase tracking-widest border border-slate-200 disabled:opacity-50"
+                        >
+                            {fetching ? 'Fetching...' : '🔍 Fetch Policy Details'}
+                        </motion.button>
+                    )}
 
                     {/* Fetched Bill Card */}
                     <AnimatePresence>

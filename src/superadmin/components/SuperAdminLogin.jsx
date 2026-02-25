@@ -67,7 +67,7 @@ const SuperAdminLogin = () => {
                     return;
                 }
                 sharedDataService.setCurrentSuperAdmin(match);
-                navigate('/superadmin-plans');
+                navigate('/superadmin');
             } else {
                 setLoginError('Invalid credentials. Please check your ID / Mobile and Password.');
                 setLoginLoading(false);

@@ -12,6 +12,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.json.JSONObject;
 import org.json.XML;
 import java.net.URLEncoder;
@@ -369,15 +370,27 @@ public class ApiController {
     }
 
     @RequestMapping(value = "/bill-fetch", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<?> billFetch(@RequestParam Map<String, String> allParams, @RequestBody(required = false) Map<String, String> bodyParams) {
+    public ResponseEntity<?> billFetch(
+            @RequestParam(required = false) Map<String, String> queryParams,
+            @RequestBody(required = false) Map<String, String> bodyParams) {
+        
         Map<String, String> data = new HashMap<>();
-        if (allParams != null) data.putAll(allParams);
+        if (queryParams != null) data.putAll(queryParams);
         if (bodyParams != null) data.putAll(bodyParams);
 
-        String consumerNo = data.getOrDefault("consumerNo", "");
+        String consumerNo = data.getOrDefault("consumerNo", "").trim().replaceAll("\\s+", "");
         String opcode = data.getOrDefault("opcode", "");
         String subDiv = data.getOrDefault("subDiv", "");
         String mobile = data.getOrDefault("mobile", "");
+        String dob = data.getOrDefault("dob", ""); 
+        
+        // Auto-format DDMMYYYY to DD-MM-YYYY if 8 digits provided
+        if (dob != null && dob.replaceAll("\\D", "").length() == 8) {
+            String digits = dob.replaceAll("\\D", "");
+            dob = digits.substring(0, 2) + "-" + digits.substring(2, 4) + "-" + digits.substring(4);
+        }
+        
+        String category = data.getOrDefault("category", "electricity");
         
         String normalizedOp = (opcode == null ? "" : opcode).trim().toUpperCase();
         if (opcode == null || normalizedOp.isEmpty() || "UNDEFINED".equals(normalizedOp) || "NONE".equals(normalizedOp) || "NULL".equals(normalizedOp)) {
@@ -390,27 +403,42 @@ public class ApiController {
         }
 
         // DOCUMENT REQUIREMENT: System generated ID, length should be 14 character
-        String merchantRef = (System.currentTimeMillis() + "000000").substring(0, 14);
+        // MDM FIX: Ensure Merchantrefno is Alphanumeric and exactly 12 chars (common BBPS requirement)
+        String merchantRef = "R" + (System.currentTimeMillis() + "000").substring(0, 11);
 
         try {
             StringBuilder url = new StringBuilder(bbpsBaseUrl + "/FetchBill.aspx");
-            url.append("?authkey=").append(venusAuthKey);
-            url.append("&authpass=").append(venusAuthPass);
+            // Standardizing casing and adding MemberID (required by some Venus MDM versions)
+            url.append("?authkey=").append(URLEncoder.encode(venusAuthKey, StandardCharsets.UTF_8));
+            url.append("&authpass=").append(URLEncoder.encode(venusAuthPass, StandardCharsets.UTF_8));
+            url.append("&MemberID=").append(URLEncoder.encode(venusAuthKey, StandardCharsets.UTF_8));
             url.append("&opcode=").append(opcode);
             url.append("&Merchantrefno=").append(merchantRef);
-            url.append("&ConsumerID=").append(URLEncoder.encode(consumerNo, StandardCharsets.UTF_8));
+            url.append("&ConsumerID=").append(URLEncoder.encode(consumerNo.replaceAll("[^a-zA-Z0-9]", ""), StandardCharsets.UTF_8));
             url.append("&ConsumerMobileNo=").append(mobile);
-            url.append("&ServiceType=").append(bbpsServiceType);
+            url.append("&ServiceType=").append(getVenusServiceType(category));
             
+            // MDM FIX: Optional fields must be Alphanumeric (NONE) if empty
             if (subDiv != null && !subDiv.isEmpty() && !"undefined".equals(subDiv)) {
-                url.append("&SubDiv=").append(URLEncoder.encode(subDiv, StandardCharsets.UTF_8));
+                url.append("&SubDiv=").append(URLEncoder.encode(subDiv.replaceAll("[^a-zA-Z0-9]", ""), StandardCharsets.UTF_8));
             } else {
-                url.append("&SubDiv=");
+                url.append("&SubDiv=NONE");
             }
-            url.append("&Field1=&Field2=");
+            
+            // Insurance & others: DOB often goes into Field1 or dob or Optional1
+            if (dob != null && !dob.isEmpty()) {
+                url.append("&Field1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&dob=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&Optional1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&DOB=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+            } else {
+                url.append("&Field1=NONE");
+            }
+            url.append("&Field2=NONE");
 
             System.out.println("[VENUS JAVA BBPS FETCH] Requesting: " + url.toString());
             String xmlResponse = restTemplate.getForObject(url.toString(), String.class);
+            System.out.println("[VENUS JAVA BBPS FETCH] Response: " + xmlResponse);
             
             // Parse XML to structured JSON for the frontend
             try {
@@ -421,6 +449,13 @@ public class ApiController {
 
                 String status = responseRoot.optString("ResponseStatus", "").toUpperCase();
                 String desc = responseRoot.optString("Description", "");
+
+                if ("IAC".equals(status) && "Unauthorised access".equalsIgnoreCase(desc)) {
+                    return ResponseEntity.ok(Map.of(
+                        "success", false, 
+                        "message", "Venus API: Unauthorised Access. Please ensure your Server IP is whitelisted and credentials (10092) are correct in the portal."
+                    ));
+                }
 
                 if ("TXN".equals(status) || "SAC".equals(status) || "RCS".equals(status) || desc.toUpperCase().contains("SUCCESS")) {
                     Map<String, Object> bill = new HashMap<>();
@@ -452,7 +487,13 @@ public class ApiController {
         String opcode = data.getOrDefault("opcode", "");
         String subDiv = data.getOrDefault("subDiv", "");
         String mobile = data.getOrDefault("mobile", "");
-        String orderId = data.getOrDefault("orderId", "ORD" + System.currentTimeMillis());
+        String dob = data.getOrDefault("dob", "");
+        if (dob != null && dob.replaceAll("\\D", "").length() == 8) {
+            String digits = dob.replaceAll("\\D", "");
+            dob = digits.substring(0, 2) + "-" + digits.substring(2, 4) + "-" + digits.substring(4);
+        }
+        String category = data.getOrDefault("category", "electricity");
+        String orderId = data.getOrDefault("orderId", "R" + (System.currentTimeMillis() + "000").substring(0, 11));
         
         String normalizedOp = (opcode == null ? "" : opcode).trim().toUpperCase();
         if (opcode == null || normalizedOp.isEmpty() || "UNDEFINED".equals(normalizedOp) || "NONE".equals(normalizedOp) || "NULL".equals(normalizedOp)) {
@@ -464,26 +505,38 @@ public class ApiController {
         }
 
         // DOCUMENT REQUIREMENT: System generated ID, length should be 14 character
-        String merchantRef = (System.currentTimeMillis() + "000000").substring(0, 14);
+        // MDM FIX: Ensure Merchantrefno is Alphanumeric and exactly 12 chars (common BBPS requirement)
+        String merchantRef = "R" + (System.currentTimeMillis() + "000").substring(0, 11);
 
         try {
             StringBuilder url = new StringBuilder(bbpsBaseUrl + "/PaymentBill.aspx");
-            url.append("?authkey=").append(venusAuthKey);
-            url.append("&authpass=").append(venusAuthPass);
+            url.append("?authkey=").append(URLEncoder.encode(venusAuthKey, StandardCharsets.UTF_8));
+            url.append("&authpass=").append(URLEncoder.encode(venusAuthPass, StandardCharsets.UTF_8));
+            url.append("&MemberID=").append(URLEncoder.encode(venusAuthKey, StandardCharsets.UTF_8));
             url.append("&opcode=").append(opcode);
             url.append("&Merchantrefno=").append(merchantRef);
-            url.append("&ConsumerID=").append(URLEncoder.encode(consumerNo, StandardCharsets.UTF_8));
+            url.append("&ConsumerID=").append(URLEncoder.encode(consumerNo.replaceAll("[^a-zA-Z0-9]", ""), StandardCharsets.UTF_8));
             url.append("&ConsumerMobileNo=").append(mobile);
-            url.append("&ServiceType=").append(bbpsServiceType);
+            url.append("&ServiceType=").append(getVenusServiceType(category));
             url.append("&Amount=").append(amount);
             url.append("&Orderid=").append(orderId);
             
+            // MDM FIX: Optional fields must be Alphanumeric (NONE) if empty
             if (subDiv != null && !subDiv.isEmpty()) {
-                url.append("&SubDiv=").append(URLEncoder.encode(subDiv, StandardCharsets.UTF_8));
+                url.append("&SubDiv=").append(URLEncoder.encode(subDiv.replaceAll("[^a-zA-Z0-9]", ""), StandardCharsets.UTF_8));
             } else {
-                url.append("&SubDiv=");
+                url.append("&SubDiv=NONE");
             }
-            url.append("&Field1=&Field2=");
+            
+            if (dob != null && !dob.isEmpty()) {
+                url.append("&Field1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&dob=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&Optional1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                url.append("&DOB=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+            } else {
+                url.append("&Field1=NONE");
+            }
+            url.append("&Field2=NONE");
 
             System.out.println("[VENUS JAVA BBPS PAY] Requesting: " + url.toString());
             String xmlResponse = restTemplate.getForObject(url.toString(), String.class);
@@ -594,58 +647,47 @@ public class ApiController {
 
             String frontendUrl = System.getProperty("FRONTEND_URL", "http://localhost:5173");
             String html = """
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <div style="background-color: #0f172a; padding: 30px; text-align: center;">
-                        <h1 style="color: #38bdf8; margin: 0; font-size: 24px;">RUPIKSHA CREDENTIALS</h1>
-                        <p style="color: #94a3b8; margin: 10px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Welcome Aboard!</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                    <div style="background-color: #0c0e12; padding: 20px; text-align: center; border-radius: 12px 12px 0 0;">
+                        <h2 style="color: #ffffff; margin: 0;">RuPiKsha Credentials</h2>
                     </div>
-                    <div style="padding: 40px; background-color: #ffffff;">
-                        <p style="font-size: 16px; color: #334155;">Hello <strong>%s</strong>,</p>
-                        <p style="font-size: 14px; color: #64748b; line-height: 1.6;">You have been added to the <strong>%s</strong> portal by <strong>%s</strong>. Here are your login details:</p>
-                        
-                        <div style="background-color: #f0f9ff; border: 1px dashed #7dd3fc; border-radius: 12px; padding: 25px; margin: 30px 0;">
-                            <table style="width: 100%%; font-size: 14px; color: #334155;">
+                    <div style="padding: 30px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px;">
+                        <p>Hello <b>%s</b>,</p>
+                        <p>Your <b>%s</b> account has been successfully created. Here are your login details:</p>
+                        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <table style="width: 100%%;">
                                 <tr>
-                                    <td style="padding: 5px 0; color: #64748b; width: 40%%;">Login ID:</td>
-                                    <td style="padding: 5px 0; font-weight: bold;">%s</td>
+                                    <td style="color: #666; width: 100px;">Login ID:</td>
+                                    <td><b>%s</b></td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 5px 0; color: #64748b;">Password:</td>
-                                    <td style="padding: 5px 0; font-weight: bold; color: #0ea5e9;">%s</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 5px 0; color: #64748b;">Portal:</td>
-                                    <td style="padding: 5px 0; font-weight: bold; color: #0284c7;">%s</td>
+                                    <td style="color: #666;">Password:</td>
+                                    <td style="color: #d32f2f;"><b>%s</b></td>
                                 </tr>
                             </table>
                         </div>
- 
-                        <div style="text-align: center; margin-top: 30px;">
-                            <a href="%s" style="background-color: #0f172a; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">Login to Your Account</a>
-                        </div>
-                    </div>
-                    <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-                        <p>© 2025 RUPIKSHA FINTECH PVT LTD. All rights reserved.</p>
-                        <p>For support, please contact your administrator.</p>
+                        <p style="text-align: center; margin-top: 30px;">
+                            <a href="%s" style="background-color: #3b82f6; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Login Now</a>
+                        </p>
                     </div>
                 </div>
-            """.formatted(
-                data.get("name"),
-                data.get("portal_type"),
-                data.get("added_by"),
-                data.get("login_id"),
-                data.get("password"),
-                data.get("portal_type"),
-                frontendUrl
-            );
+            """.formatted(data.get("name"), data.get("portal_type"), data.get("to"), data.get("password"), frontendUrl);
 
             helper.setText(html, true);
             mailSender.send(message);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Credential email sent"));
+            return ResponseEntity.ok(Map.of("success", true, "message", "Credentials sent"));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
         }
+    }
+
+    @RequestMapping(value = "/callback", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<String> venusCallback(@RequestParam Map<String, String> queryParams, @RequestBody(required = false) String body) {
+        System.out.println("🔔 [VENUS CALLBACK RECEIVED (JAVA)]");
+        System.out.println("Query Params: " + queryParams);
+        if (body != null) System.out.println("Body: " + body);
+        
+        return ResponseEntity.ok("SUCCESS");
     }
 
 
@@ -660,7 +702,7 @@ public class ApiController {
     public ResponseEntity<?> sendAdminOtp(@RequestBody Map<String, String> body) {
         String email = body.getOrDefault("email", "").trim().toLowerCase();
         if (!email.equals(ADMIN_OTP_EMAIL)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Email not registered for OTP login."));
+            return ResponseEntity.status(403).body(Map.of("error", "Access Denied: This email is not authorized for Admin OTP login."));
         }
         // Generate 6-digit OTP (expires in 2 minutes)
         String otp = String.valueOf(100000 + new Random().nextInt(900000));
@@ -723,11 +765,38 @@ public class ApiController {
     private String getVenusOperatorCode(String name) {
         if (name == null || name.isBlank()) return "";
         String n = name.trim().toUpperCase();
-        if (n.contains("AIRTEL")) return "ATL";
-        if (n.contains("JIO")) return "JIO";
-        if (n.contains("BSNL")) return "BSN";
-        if (n.contains("VI") || n.contains("VODAFONE") || n.contains("IDEA")) return "VOD";
+        
+        // If it's already a 3-character opcode from our list, return as is
+        if (n.length() == 3) return n;
+        
+        // Exact mappings for display names
+        if (n.equals("AIRTEL") || n.contains("AIRTEL")) return "ATL";
+        if (n.equals("JIO") || n.contains("JIO") || n.equals("RELIANCE JIO")) return "JRE";
+        if (n.equals("BSNL") || n.contains("BSNL")) return "BNT";
+        if (n.equals("VODAFONE") || n.equals("IDEA") || n.equals("VI") || n.contains("VODAFONE") || n.contains("IDEA") || n.contains("VI")) return "VDF";
+        
+        // Insurance specific opcodes if sent as name
+        if (n.equals("LIC") || n.contains("LIFE INSURANCE CORPORATION")) return "LIC";
+        if (n.equals("HDFC LIFE") || n.contains("HDFC LIFE")) return "HLI";
+        if (n.equals("SBI LIFE") || n.contains("SBI LIFE")) return "SBI";
+        
         return n;
+    }
+
+    private String getVenusServiceType(String category) {
+        if (category == null) return "EB";
+        switch (category.toLowerCase()) {
+            case "insurance": return "IN"; // Reverted to IN
+            case "gas": return "GP";
+            case "water": return "WT";
+            case "fastag": return "FT";
+            case "postpaid":
+            case "landline": return "FB";
+            case "data_card": return "DC";
+            case "broadband": return "BB";
+            case "electricity": 
+            default: return "EB";
+        }
     }
 }
 
