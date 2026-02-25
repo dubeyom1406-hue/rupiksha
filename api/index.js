@@ -5,7 +5,7 @@ const axios = require('axios');
 const { XMLParser } = require('fast-xml-parser');
 require('dotenv').config();
 
-// ── Venus BBPS Config
+// ── Venus Config
 const BBPS_BASE = 'https://venusrecharge.co.in';
 const BBPS_AUTHKEY = '10092';
 const BBPS_AUTHPASS = 'RUPIKSHA@816';
@@ -16,12 +16,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Health Check Route
+// Health Check
 app.get('/api/health', (req, res) => {
     res.json({ status: "UP", message: "Rupiksha Node.js Backend is Running on Vercel!" });
 });
 
-// Temporary in-memory storage for OTPs (Note: Vercel functions are stateless, this is for short-lived sessions)
+// Stateless OTP Store
 const otpStore = new Map();
 
 // Email Transporter
@@ -36,247 +36,190 @@ const transporter = nodemailer.createTransport({
     tls: { rejectUnauthorized: false }
 });
 
-// Endpoint to Send Email OTP
+// --- EMAIL ENDPOINTS ---
+
 app.post('/api/send-otp', async (req, res) => {
     const { to, email, otp: clientOtp, name } = req.body;
     const targetEmail = to || email;
     if (!targetEmail) return res.status(400).json({ success: false, message: "Email is required" });
-
     const otp = clientOtp || Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(targetEmail, { otp, expires: Date.now() + 300000 });
 
-    const mailOptions = {
-        from: `"RuPiKsha Support" <${process.env.EMAIL_USER}>`,
-        to: targetEmail,
-        subject: 'Email Verification OTP - RuPiKsha',
-        html: `
-            <div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+    try {
+        await transporter.sendMail({
+            from: `"RuPiKsha Support" <${process.env.EMAIL_USER}>`,
+            to: targetEmail,
+            subject: 'Email Verification OTP - RuPiKsha',
+            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
                 <h2 style="color: #2c3e50;">Email Verification</h2>
                 <p>Hello <b>${name || 'Partner'}</b>,</p>
-                <p>Your OTP for RuPiKsha verification is:</p>
-                <h1 style="color: #3498db; letter-spacing: 5px;">${otp}</h1>
+                <p>Your OTP for RuPiKsha verification is: <h1 style="color: #3498db; letter-spacing: 5px;">${otp}</h1></p>
                 <p>This OTP will expire in 5 minutes.</p>
-            </div>
-        `
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
+            </div>`
+        });
         res.status(200).json({ success: true, message: "OTP sent to email" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Failed to send email", error: error.message });
+        res.status(500).json({ success: false, message: "Failed to send email" });
     }
 });
 
-// Endpoint to Send Approval Credentials
 app.post('/api/send-approval', async (req, res) => {
     const { to, name, login_id, password, id_label, id_value, portal_type } = req.body;
-    if (!to) return res.status(400).json({ success: false, message: "Email is required" });
-
-    const mailOptions = {
-        from: `"RuPiKsha Admin" <${process.env.EMAIL_USER}>`,
-        to: to,
-        subject: `Success! Your ${portal_type} account is Approved`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 20px; overflow: hidden;">
-                <div style="background: #0f172a; padding: 30px; text-align: center; color: white;">
-                    <h2 style="margin: 0;">Account Approved</h2>
-                </div>
-                <div style="padding: 30px;">
-                    <p>Hello <b>${name}</b>,</p>
-                    <p>Your request for <b>${portal_type}</b> has been approved.</p>
-                    <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                        <p><b>Login ID:</b> ${login_id}</p>
-                        <p><b>Password:</b> ${password}</p>
-                        <p><b>${id_label}:</b> ${id_value}</p>
-                    </div>
-                    <p>Welcome to RuPiKsha!</p>
-                </div>
-            </div>
-        `
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
-        res.status(200).json({ success: true, message: "Approval email sent" });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Failed to send approval email" });
-    }
+        await transporter.sendMail({
+            from: `"RuPiKsha Admin" <${process.env.EMAIL_USER}>`,
+            to: to,
+            subject: `Account Approved - ${portal_type}`,
+            html: `<div style="font-family: Arial; padding: 30px; border: 1px solid #eee; border-radius: 12px;">
+                <h2 style="color: #10b981;">Congratulations ${name}!</h2>
+                <p>Your ${portal_type} request is approved.</p>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px;">
+                    <p><b>Login ID:</b> ${login_id}</p>
+                    <p><b>Password:</b> ${password}</p>
+                    <p><b>${id_label}:</b> ${id_value}</p>
+                </div>
+            </div>`
+        });
+        res.json({ success: true, message: "Approval email sent" });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// Endpoint to Send Mobile OTP (Simulation mostly)
+app.post('/api/send-credentials', async (req, res) => {
+    const { to, name, login_id, password, portal_type, added_by } = req.body;
+    try {
+        await transporter.sendMail({
+            from: `"RuPiKsha" <${process.env.EMAIL_USER}>`,
+            to: to,
+            subject: `Your Login Credentials`,
+            html: `<div style="font-family: Arial; padding: 20px;">
+                <p>Hello ${name}, you've been added by ${added_by} as a ${portal_type}.</p>
+                <p>Login ID: ${login_id}<br/>Pass: ${password}</p>
+            </div>`
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
+});
+
+// --- SMS & OTP ---
+
 app.post('/api/send-mobile-otp', async (req, res) => {
     const { mobile } = req.body;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(mobile, { otp, expires: Date.now() + 300000 });
-
-    if (!process.env.FAST2SMS_KEY || process.env.FAST2SMS_KEY === 'YOUR_FAST2SMS_API_KEY_HERE') {
-        return res.status(200).json({ message: "OTP sent (Simulation)", preview: otp });
+    if (!process.env.FAST2SMS_KEY || process.env.FAST2SMS_KEY.length < 10) {
+        return res.json({ message: "OTP sent (Simulation)", preview: otp });
     }
-
     try {
-        const response = await axios.get('https://www.fast2sms.com/dev/bulkV2', {
-            params: {
-                authorization: process.env.FAST2SMS_KEY,
-                route: 'otp',
-                variables_values: otp,
-                numbers: mobile
-            }
+        await axios.get('https://www.fast2sms.com/dev/bulkV2', {
+            params: { authorization: process.env.FAST2SMS_KEY, route: 'otp', variables_values: otp, numbers: mobile }
         });
-        res.status(200).json({ success: true, message: "OTP sent to mobile" });
-    } catch (error) {
-        res.status(500).json({ message: "Failed to connect to SMS Gateway" });
-    }
+        res.json({ success: true, message: "OTP sent to mobile" });
+    } catch (e) { res.status(500).json({ message: "SMS Gateway Error" }); }
 });
 
-// Endpoint to Verify OTP
 app.post('/api/verify-otp', (req, res) => {
     const { identity, otp } = req.body;
     const stored = otpStore.get(identity);
-    if (!stored) return res.status(400).json({ message: "No OTP found" });
-    if (Date.now() > stored.expires) {
+    if (stored && stored.otp === otp && Date.now() < stored.expires) {
         otpStore.delete(identity);
-        return res.status(400).json({ message: "OTP expired" });
+        return res.json({ success: true, message: "Verified" });
     }
-    if (stored.otp === otp) {
-        otpStore.delete(identity);
-        res.status(200).json({ message: "Verified" });
-    } else {
-        res.status(400).json({ message: "Invalid OTP" });
-    }
+    res.status(400).json({ message: "Invalid or expired OTP" });
 });
 
-// Bill Fetch with DOB support
+// --- VERIFICATION STUBS ---
+
+app.post('/api/verify-account', (req, res) => res.json({ success: true, accountHolderName: "MR. OM DUBEY" }));
+app.post('/api/verify-pan', (req, res) => res.json({ success: true, data: { status: "VALID", name: "OM DUBEY" } }));
+app.post('/api/verify-upi', (req, res) => res.json({ success: true, data: { status: "VALID", name: "OM DUBEY" } }));
+
+// --- BILLS & RECHARGE (VENUS) ---
+
 app.get('/api/bill-fetch', async (req, res) => {
     const { consumerNo, mobile, opcode, subDiv, dob } = req.query;
-    if (!opcode || !consumerNo) return res.status(400).json({ success: false, message: "Missing required fields" });
-
-    const merchantRef = "R" + (Date.now().toString()).slice(-11);
+    if (!opcode) return res.status(400).json({ success: false, message: "Select Biller" });
+    const merchantRef = "R" + Date.now().toString().slice(-11);
     const params = new URLSearchParams({
-        authkey: BBPS_AUTHKEY,
-        authpass: BBPS_AUTHPASS,
-        opcode: opcode,
-        Merchantrefno: merchantRef,
-        ConsumerID: consumerNo,
-        ConsumerMobileNo: mobile || "9876543210",
-        ServiceType: BBPS_STYPE
+        authkey: BBPS_AUTHKEY, authpass: BBPS_AUTHPASS, opcode, Merchantrefno: merchantRef,
+        ConsumerID: consumerNo, ConsumerMobileNo: mobile || "9876543210", ServiceType: BBPS_STYPE
     });
-
     if (subDiv) params.append('SubDiv', subDiv);
-    if (dob) {
-        params.append('Field1', dob);
-        params.append('dob', dob);
-    } else {
-        params.append('Field1', 'NONE');
-    }
-    params.append('Field2', 'NONE');
+    if (dob) params.append('Field1', dob);
 
     try {
-        const response = await axios.get(`${BBPS_BASE}/FetchBill.aspx?${params.toString()}`, { timeout: 15000 });
-        const parsed = xmlParser.parse(response.data);
-        const root = parsed.Response || parsed.BillFetch || parsed;
-        const status = root.ResponseStatus?.toString().toUpperCase();
-
-        if (status === 'TXN' || status === 'SAC' || status === 'RCS' || root.Description?.toUpperCase().includes('SUCCESS')) {
-            return res.status(200).json({
-                success: true,
-                bill: {
-                    custName: root.ConsumerName || 'Valued Customer',
-                    amount: Number(root.DueAmount) || 0,
-                    dueDate: root.DueDate || 'N/A',
-                    orderId: root.OrderId,
-                    merchantRef: merchantRef
-                },
-                source: 'VERCEL_NODE'
-            });
+        const response = await axios.get(`${BBPS_BASE}/FetchBill.aspx?${params.toString()}`);
+        const root = xmlParser.parse(response.data).Response || {};
+        if (root.ResponseStatus === 'TXN' || root.Description?.toUpperCase().includes('SUCCESS')) {
+            return res.json({ success: true, bill: { custName: root.ConsumerName, amount: root.DueAmount, orderId: root.OrderId, merchantRef } });
         }
-        res.status(200).json({ success: false, message: root.Description || "Fetch Failed" });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "API Error" });
-    }
+        res.json({ success: false, message: root.Description || "Fetch Failed" });
+    } catch (e) { res.status(500).json({ success: false, message: "Venus API Offline/Blocked" }); }
 });
 
-// Bill Pay with DOB support
 app.post('/api/bill-pay', async (req, res) => {
-    const { consumerNo, amount, mobile, orderId, opcode, subDiv, dob } = req.body;
-    if (!consumerNo || !amount || !opcode) return res.status(400).json({ success: false, message: "Missing fields" });
-
-    const merchantRef = "R" + (Date.now().toString()).slice(-11);
+    const { consumerNo, amount, opcode, mobile, orderId, dob } = req.body;
+    const merchantRef = "R" + Date.now().toString().slice(-11);
     const params = new URLSearchParams({
-        authkey: BBPS_AUTHKEY,
-        authpass: BBPS_AUTHPASS,
-        opcode: opcode,
-        Merchantrefno: merchantRef,
-        ConsumerID: consumerNo,
-        ConsumerMobileNo: mobile || "9876543210",
-        ServiceType: BBPS_STYPE,
-        Amount: amount,
-        Orderid: orderId || merchantRef
+        authkey: BBPS_AUTHKEY, authpass: BBPS_AUTHPASS, opcode, Merchantrefno: merchantRef,
+        ConsumerID: consumerNo, ConsumerMobileNo: mobile || "9876543210", ServiceType: BBPS_STYPE,
+        Amount: amount, Orderid: orderId || merchantRef
     });
-
-    if (subDiv) params.append('SubDiv', subDiv);
-    if (dob) {
-        params.append('Field1', dob);
-        params.append('dob', dob);
-    } else {
-        params.append('Field1', 'NONE');
-    }
-    params.append('Field2', 'NONE');
+    if (dob) params.append('Field1', dob);
 
     try {
-        const response = await axios.get(`${BBPS_BASE}/PaymentBill.aspx?${params.toString()}`, { timeout: 30000 });
-        const parsed = xmlParser.parse(response.data);
-        const root = parsed.Response || parsed.PaymentBill || parsed;
-        const status = root.ResponseStatus?.toString().toUpperCase();
-
-        if (status === 'TXN' || status === 'SAC' || status === 'RCS' || root.Description?.toUpperCase().includes('SUCCESS')) {
-            return res.status(200).json({
-                success: true,
-                message: root.Description || 'Payment Successful!',
-                txid: root.OperatorTxnId || root.OrderId || merchantRef,
-                source: 'VERCEL_NODE'
-            });
-        }
-        res.status(200).json({ success: false, message: root.Description || "Payment Failed" });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "API Error" });
-    }
+        const response = await axios.get(`${BBPS_BASE}/PaymentBill.aspx?${params.toString()}`);
+        const root = xmlParser.parse(response.data).Response || {};
+        if (root.ResponseStatus === 'TXN') return res.json({ success: true, txid: root.OperatorTxnId });
+        res.json({ success: false, message: root.Description });
+    } catch (e) { res.status(500).json({ success: false }); }
 });
 
-// Recharge
 app.post('/api/recharge', async (req, res) => {
-    const { mobile, operator, amount, serviceType } = req.body;
-    const operatorCode = operator?.toUpperCase().slice(0, 3) || 'JIO';
+    const { mobile, operator, amount } = req.body;
     const merchantRefNo = `RPK${Date.now()}`;
-
     try {
         const venusRes = await axios.post('https://api.venusrecharge.com/V2/api/recharge/transaction', {
-            mobileNo: mobile,
-            operatorCode,
-            serviceType: serviceType || 'MR',
-            amount: Number(amount),
-            merchantRefNo
-        }, {
-            headers: { authkey: BBPS_AUTHKEY, authpass: BBPS_AUTHPASS },
-            timeout: 20000
-        });
-
+            mobileNo: mobile, operatorCode: operator?.toUpperCase().slice(0, 3) || 'JIO',
+            serviceType: 'MR', amount: Number(amount), merchantRefNo
+        }, { headers: { authkey: BBPS_AUTHKEY, authpass: BBPS_AUTHPASS } });
         const d = venusRes.data;
-        const ok = d && (d.responseStatus?.toUpperCase() === 'SUCCESS' || d.status?.toUpperCase() === 'SUCCESS');
-
-        res.status(200).json({
-            success: ok,
-            message: d.description || (ok ? "Recharge Successful" : "Recharge Failed"),
-            txid: d.orderNo || merchantRefNo
-        });
-    } catch (err) {
-        res.status(200).json({ success: false, message: "Recharge Timeout" });
-    }
+        res.json({ success: d.responseStatus === 'SUCCESS', message: d.description, txid: d.orderNo });
+    } catch (e) { res.status(200).json({ success: false, message: "Recharge API Issue" }); }
 });
 
-// Proxy fallbacks for unknown routes to index.html (SPA)
-app.use((req, res) => {
-    res.status(404).json({ error: "API Route Not Found" });
+app.get('/api/recharge-balance', async (req, res) => {
+    try {
+        const r = await axios.get(`${BBPS_BASE}/Balance.aspx?authkey=${BBPS_AUTHKEY}&authpass=${BBPS_AUTHPASS}&service=recharge`);
+        const p = xmlParser.parse(r.data).Response || {};
+        res.json({ success: true, balance: p.Balance });
+    } catch (e) { res.json({ success: false }); }
+});
+
+// --- ADMIN OTP ---
+
+app.post('/api/send-admin-otp', async (req, res) => {
+    const { email } = req.body;
+    if (email !== 'dubeyom1406@gmail.com') return res.status(403).json({ error: "Unauthorized" });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore.set(email, { otp, expires: Date.now() + 120000 });
+    try {
+        await transporter.sendMail({
+            from: `"RuPiKsha" <${process.env.EMAIL_USER}>`,
+            to: email, subject: "Admin OTP",
+            html: `<h1 style="text-align:center">${otp}</h1>`
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "Failed" }); }
+});
+
+app.post('/api/verify-admin-otp', (req, res) => {
+    const { email, otp } = req.body;
+    const s = otpStore.get(email);
+    if (s && s.otp === otp && Date.now() < s.expires) {
+        otpStore.delete(email);
+        return res.json({ success: true });
+    }
+    res.status(400).json({ error: "Invalid OTP" });
 });
 
 module.exports = app;
