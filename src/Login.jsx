@@ -191,62 +191,52 @@ const Login = () => {
 
         if (view === 'login') {
             if (loginStep === 'credentials') {
-                let userRes;
                 if (loginMethod === 'password') {
-                    userRes = dataService.checkCredentials(loginForm.username, loginForm.password);
-                } else {
-                    const user = dataService.getUserByUsername(loginForm.username);
-                    userRes = user ? { success: true, user } : { success: false, message: t('user_not_found') };
-                }
+                    let location = null;
+                    try {
+                        const pos = await new Promise((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
+                        });
+                        location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    } catch (e) { console.log("Location denied"); }
 
-                if (userRes.success) {
-                    const user = userRes.user;
-                    setTempUser(user);
-
-                    if (loginMethod === 'password') {
-                        // Directly log in for password (or you could also add OTP here if requested)
-                        dataService.loginUser(loginForm.username, loginForm.password);
-                        setTimeout(() => {
-                            navigate('/dashboard');
-                            setIsLoading(false);
-                        }, 500);
+                    const logRes = await dataService.loginUser(loginForm.username, loginForm.password, location);
+                    if (logRes.success) {
+                        navigate('/dashboard');
                     } else {
-                        // OTP Login Method -> Send OTP via Backend
-                        try {
-                            const mobile = user.mobile || loginForm.username;
-                            const backendRes = await fetch(`${BACKEND_URL}/send-mobile-otp`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ mobile: mobile })
-                            });
-
-                            if (backendRes.ok) {
-                                setLoginStep('otp');
-                                setIsLoading(false);
-                            } else {
-                                const errorText = await backendRes.text();
-                                let errorMsg = "Failed to send OTP.";
-                                try {
-                                    const errorJson = JSON.parse(errorText);
-                                    errorMsg = errorJson.error || errorJson.message || errorMsg;
-                                } catch (e) {
-                                    errorMsg = errorText || errorMsg;
-                                }
-                                alert(errorMsg);
-                                setIsLoading(false);
-                            }
-                        } catch (err) {
-                            console.error("OTP Send Error:", err);
-                            alert(`Connection error: ${err.message}. Please ensure the Java backend is running on port 5001.`);
-                            setIsLoading(false);
-                        }
+                        alert(logRes.message || t('cred_error'));
                     }
+                    setIsLoading(false);
+                    return;
                 } else {
-                    alert(userRes.message || t('cred_error'));
+                    // OTP Login Method
+                    const user = dataService.getUserByUsername(loginForm.username);
+                    if (!user) {
+                        alert(t('user_not_found'));
+                        setIsLoading(false);
+                        return;
+                    }
+                    setTempUser(user);
+                    try {
+                        const mobile = user.mobile || loginForm.username;
+                        const backendRes = await fetch(`${BACKEND_URL}/send-mobile-otp`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ mobile: mobile })
+                        });
+
+                        if (backendRes.ok) {
+                            setLoginStep('otp');
+                        } else {
+                            alert("Failed to send OTP.");
+                        }
+                    } catch (err) {
+                        alert(`Connection error: ${err.message}`);
+                    }
                     setIsLoading(false);
                 }
             } else if (loginStep === 'otp') {
-                // Verify Mobile OTP via Backend
+                // Verify Mobile OTP
                 try {
                     const response = await fetch(`${BACKEND_URL}/verify-otp`, {
                         method: 'POST',
@@ -256,46 +246,38 @@ const Login = () => {
 
                     if (response.ok) {
                         const data = await response.json();
-                        // Finalize login
-                        if (loginMethod === 'password') {
-                            dataService.loginUser(loginForm.username, loginForm.password);
-                        } else {
-                            const allData = dataService.getData();
-                            allData.currentUser = tempUser;
-                            dataService.saveData(allData);
-                            dataService.logLogin(tempUser.username, 'Success (OTP-Login)');
-                        }
-
-                        setTimeout(() => {
-                            navigate('/dashboard');
-                            setIsLoading(false);
-                        }, 500);
+                        // For OTP login, we need to finalize the session
+                        localStorage.setItem('rupiksha_user', JSON.stringify(tempUser));
+                        navigate('/dashboard');
                     } else {
-                        const errorText = await response.text();
-                        let errorMsg = "Verification failed.";
-                        try {
-                            const errorJson = JSON.parse(errorText);
-                            errorMsg = errorJson.error || errorJson.message || errorMsg;
-                        } catch (e) {
-                            errorMsg = errorText || errorMsg;
-                        }
-                        alert(errorMsg);
-                        setIsLoading(false);
+                        alert("Verification failed.");
                     }
                 } catch (error) {
-                    console.error("OTP Verify Error:", error);
-                    alert(`Connection error: ${error.message}. Please ensure the Java backend is running on port 5001.`);
-                    setIsLoading(false);
+                    alert(`Connection error: ${error.message}`);
                 }
+                setIsLoading(false);
             }
         } else if (view === 'register') {
-            dataService.registerUser(registerForm);
-            setTimeout(() => {
-                setView('login');
-                setIsLoading(false);
-                alert(`Registration Successful! Your account for ${registerForm.mobile} is now pending admin approval. You will be able to login once an administrator approves your request and assigns your credentials.`);
-            }, 1000);
+            // Register usually goes to backend
+            try {
+                const res = await fetch(`${BACKEND_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(registerForm)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setView('login');
+                    alert(`Registration Successful! Please wait for admin approval.`);
+                } else {
+                    alert(data.message || "Registration Failed");
+                }
+            } catch (e) {
+                alert("Server Connection Failed");
+            }
+            setIsLoading(false);
         } else {
+            // Forgot Password handling
             setTimeout(() => {
                 setView('login');
                 setIsLoading(false);

@@ -6,13 +6,9 @@ import {
     ArrowRight, Receipt, Download, X, ChevronRight, Clock,
     Hash, User as UserIcon, Calendar, Banknote, Star, TrendingUp, Activity
 } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { dataService, BACKEND_URL } from '../../services/dataService';
 import { BILL_CATEGORIES as BILL_CATEGORIES_DATA } from './utilityData';
 import { initSpeech, announceSuccess, announceFailure, announceProcessing, speak, announceError, announceWarning, announceGrandSuccess } from '../../services/speechService';
-
-/* ─────────────────────── CONSTANTS ─────────────────────── */
-const BILL_FETCH_API = "/api/bill-fetch";
-const BILL_PAY_API = "/api/bill-pay";
 
 
 const NAVY = '#0f2557';
@@ -294,7 +290,7 @@ export default function UtilityBill() {
 
     /* ── Check backend health ── */
     useEffect(() => {
-        fetch("/api/health")
+        fetch(`${BACKEND_URL}/health`)
             .then(r => r.ok ? setBackendStatus('online') : setBackendStatus('offline'))
             .catch(() => setBackendStatus('offline'));
 
@@ -357,8 +353,7 @@ export default function UtilityBill() {
         try {
             initSpeech();
             announceProcessing(`आपका ${biller.name || 'बिल'} फेच हो रहा है, कृपया प्रतीक्षा करें।`);
-            console.log("[BBPS] Fetching from:", BILL_FETCH_API);
-            const res = await fetch(BILL_FETCH_API, {
+            const res = await fetch(`${BACKEND_URL}/bill-fetch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -409,7 +404,7 @@ export default function UtilityBill() {
         try {
             initSpeech();
             announceProcessing("आपका पेमेंट प्रोसेस हो रहा है। कृपया पेज रिफ्रेश न करें।");
-            const response = await fetch(BILL_PAY_API, {
+            const response = await fetch(`${BACKEND_URL}/bill-pay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -441,17 +436,14 @@ export default function UtilityBill() {
 
                 setTxId(data.txid || ('BPAY' + Date.now()));
 
-                // Save to local reports
-                dataService.logTransaction(
-                    user.username,
-                    `Bill Pay: ${biller.name || biller}`,
+                // Save to logs
+                await dataService.logTransaction(
+                    user.id,
+                    `BILL_${biller.opcode || 'PAY'}`,
                     fetchedBill.amount,
-                    'Success',
-                    {
-                        consumerNo,
-                        txid: data.txid,
-                        biller: biller.name
-                    }
+                    biller.name || 'Utility',
+                    consumerNo,
+                    'SUCCESS'
                 );
 
                 announceGrandSuccess(

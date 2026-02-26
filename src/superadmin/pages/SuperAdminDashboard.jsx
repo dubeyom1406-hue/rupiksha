@@ -88,13 +88,24 @@ const SuperAdminDashboard = () => {
     const [selectedContact, setSelectedContact] = useState(null);
     const [cardIdx, setCardIdx] = useState(0);
 
-    const load = () => {
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const load = async () => {
+        setLoading(true);
         const s = sharedDataService.getCurrentSuperAdmin();
         if (!s) return;
-        const fresh = sharedDataService.getSuperAdminById(s.id) || s;
-        setDist(fresh);
-        const all = dataService.getData().users || [];
-        setRetailers(all);
+
+        // Fetch real balance if possible, or use local
+        const userBal = await dataService.getWalletBalance(s.id);
+        setDist({ ...s, wallet: { balance: userBal } });
+
+        const allUsers = await dataService.getAllUsers();
+        setRetailers(allUsers);
+
+        const allTxns = await dataService.getAllTransactions();
+        setTransactions(allTxns);
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -103,16 +114,18 @@ const SuperAdminDashboard = () => {
         return () => window.removeEventListener('superadminDataUpdated', load);
     }, []);
 
-    const active = retailers.filter(r => r.status === 'Approved');
-    const walletBal = dist?.wallet?.balance || '3,48,200.00';
+    const activeUsers = retailers.filter(r => r.status === 'Approved');
+    const walletBal = dist?.wallet?.balance || '0.00';
     const distName = dist?.name || 'SUPERADMIN MASTER';
     const distId = dist?.id || 'SA-2024-0001';
 
+    const netWallet = retailers.reduce((acc, curr) => acc + (parseFloat(curr.balance) || 0), 0);
+
     const stats = [
-        { label: 'Network Wallet', val: '48,15,400', prefix: '₹', icon: Wallet, iconColor: '#6366f1', bg: '#eef2ff' },
-        { label: 'Network Profit', val: '2,42,800', prefix: '₹', icon: TrendingUp, iconColor: '#10b981', bg: '#ecfdf5' },
-        { label: 'Distributors', val: String(sharedDataService.getAllDistributors().length || 0), prefix: '', icon: Building2, iconColor: '#f59e0b', bg: '#fffbeb' },
-        { label: 'Total Retailers', val: String(dataService.getData().users?.length || 0), prefix: '', icon: Users, iconColor: '#3b82f6', bg: '#eff6ff' },
+        { label: 'Network Wallet', val: netWallet.toFixed(2), prefix: '₹', icon: Wallet, iconColor: '#6366f1', bg: '#eef2ff' },
+        { label: 'Active Retailers', val: String(activeUsers.length), prefix: '', icon: CheckCircle2, iconColor: '#10b981', bg: '#ecfdf5' },
+        { label: 'System Users', val: String(retailers.length), prefix: '', icon: Users, iconColor: '#3b82f6', bg: '#eff6ff' },
+        { label: 'Recent Volume', val: String(transactions.length), prefix: '', icon: Activity, iconColor: '#f59e0b', bg: '#fffbeb' },
     ];
 
     /* wallet cards (demo) */
@@ -246,25 +259,29 @@ const SuperAdminDashboard = () => {
                                 ))}
                             </div>
 
-                            {recentTxns.map((t, i) => (
+                            {transactions.length > 0 ? transactions.slice(0, 8).map((t, i) => (
                                 <motion.div key={i}
                                     whileHover={{ backgroundColor: '#f8faff' }}
                                     className="grid grid-cols-[2fr_1fr_1.2fr_auto] gap-4 items-center px-6 py-3.5 border-b border-slate-50 last:border-0 transition-colors cursor-pointer"
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm"
-                                            style={{ background: t.color }}>
-                                            {t.type.charAt(0)}
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm bg-indigo-500">
+                                            {t.service_type?.charAt(0) || 'T'}
                                         </div>
-                                        <p className="text-xs font-black text-slate-800 truncate">{t.name}</p>
+                                        <div>
+                                            <p className="text-xs font-black text-slate-800 truncate">{t.service_type}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 truncate">{t.user_name || t.username || 'System'}</p>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-500">{t.type}</p>
-                                    <p className="text-[10px] font-bold text-slate-400">{t.date}</p>
-                                    <p className={`text-xs font-black text-right ${t.up ? 'text-slate-900' : 'text-red-500'}`}>
-                                        {t.amount}
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{t.status}</p>
+                                    <p className="text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString()}</p>
+                                    <p className={`text-xs font-black text-right ${t.status === 'SUCCESS' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        ₹{t.amount}
                                     </p>
                                 </motion.div>
-                            ))}
+                            )) : (
+                                <div className="py-10 text-center text-slate-300 text-[10px] font-black uppercase tracking-[0.25em]">No recent activity</div>
+                            )}
                         </motion.div>
                     </div>
 

@@ -22,26 +22,17 @@ const Retailers = () => {
     const [showSuccessView, setShowSuccessView] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
 
-    const loadData = () => {
-        const sa = sharedDataService.getCurrentSuperAdmin();
-        if (!sa) return;
-
-        const allUsers = dataService.getData().users || [];
-        const allDists = sharedDataService.getAllDistributors() || [];
-
-        // Distributors belonging to this Super Admin
-        const distsUnder = allDists.filter(d => d.ownerId === sa.id);
-
-        // Retailers belonging directly to this SA
-        const retailersDirect = allUsers.filter(u => u.ownerId === sa.id);
-
-        // Retailers belonging to those Distributors (either assigned or owned)
-        const retailersViaDist = allUsers.filter(u => {
-            return distsUnder.some(d => (d.assignedRetailers || []).includes(u.username) || u.ownerId === d.id);
-        });
-
-        const totalRetailers = [...new Set([...retailersDirect, ...retailersViaDist])];
-        setRetailers(totalRetailers);
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const allUsers = await dataService.getAllUsers();
+            // Filter retailers (you might want to show all for Super Admin, or differentiate)
+            setRetailers(allUsers);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -206,9 +197,12 @@ const Retailers = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{r.city || '—'}, {r.state}</p>
+                                        {r.latitude && r.longitude && (
+                                            <p className="text-[8px] font-mono text-slate-400 mt-1 uppercase tracking-tighter">LOC: {r.latitude}, {r.longitude}</p>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-black text-slate-800 font-mono tracking-tight">₹ {r.wallet?.balance || '0.00'}</p>
+                                        <p className="text-sm font-black text-slate-800 font-mono tracking-tight">₹ {parseFloat(r.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider border

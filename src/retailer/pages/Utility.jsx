@@ -267,15 +267,26 @@ function MobileTab() {
         if (!/^\d{10}$/.test(mobile)) { announceWarning('सही 10 अंकों का मोबाइल नंबर'); setStatus({ type: 'error', message: '⚠️ Enter a valid 10-digit mobile number' }); return; }
         if (!operator) { announceWarning('ऑपरेटर पहचाना नहीं गया'); setStatus({ type: 'error', message: '⚠️ Operator not detected. Enter valid number.' }); return; }
         if (!amount || Number(amount) < 1) { announceWarning('राशि या प्लान चुनें'); setStatus({ type: 'error', message: '⚠️ Please select a plan or enter amount' }); return; }
+
+        const user = dataService.getCurrentUser();
+        if (parseFloat(user.balance || 0) < parseFloat(amount)) {
+            announceWarning('अपर्याप्त बैलेंस');
+            setStatus({ type: 'error', message: '⚠️ Insufficient balance in wallet' });
+            return;
+        }
+
         setLoading(true); setStatus(null);
         try {
             initSpeech(); announceProcessing("रिचार्ज प्रोसेस हो रहा है।");
-            const res = await fetch(RECHARGE_API, {
+            const res = await fetch(`${BACKEND_URL}/recharge`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile, operator: opCode, circle, amount, serviceType: 'MOBILE' })
+                body: JSON.stringify({ userId: user.id, mobile, operator: opCode, circle, amount, serviceType: 'MOBILE' })
             });
             const result = await res.json();
             if (result.success) {
+                // Log to DB & Update Local Wallet
+                await dataService.logTransaction(user.id, `MOBILE_${opCode}`, amount, operator, mobile, 'SUCCESS');
+
                 announceGrandSuccess(
                     `आपका ₹${amount} का ${operator} रिचार्ज सफल हो गया।`,
                     `मोबाइल नंबर ${mobile} पर ${operator} ${circle} की सेवा सक्रिय हो गई।`
@@ -284,8 +295,15 @@ function MobileTab() {
                 confetti({ particleCount: 180, spread: 80, origin: { y: 0.5 }, colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8'] });
                 setTxid(result.txid || `TXN${Date.now()}`);
                 setShowSuccess(true);
-            } else { announceError(result.message || 'रिचार्ज फेल हो गया'); setStatus({ type: 'error', message: `❌ ${result.message || 'Recharge failed'}` }); }
-        } catch { announceError('कनेक्शन एरर। बैकएंड से कनेक्ट नहीं हो पाया।'); setStatus({ type: 'error', message: '❌ Connection error. Try again.' }); }
+            } else {
+                await dataService.logTransaction(user.id, `MOBILE_${opCode}`, amount, operator, mobile, 'FAILED');
+                announceError(result.message || 'रिचार्ज फेल हो गया');
+                setStatus({ type: 'error', message: `❌ ${result.message || 'Recharge failed'}` });
+            }
+        } catch {
+            announceError('कनेक्शन एरर। बैकएंड से कनेक्ट नहीं हो पाया।');
+            setStatus({ type: 'error', message: '❌ Connection error. Try again.' });
+        }
         finally { setLoading(false); }
     };
 
@@ -458,22 +476,35 @@ function DthTab() {
         if (!subscriberId) { announceWarning('सब्सक्राइबर नंबर डालें'); setStatus({ type: 'error', message: '⚠️ Enter Subscriber / VC Number' }); return; }
         if (!provider) { announceWarning('डीटीएच प्रोवाइडर चुनें'); setStatus({ type: 'error', message: '⚠️ Select DTH provider' }); return; }
         if (!selectedPlan) { announceWarning('प्लान चुनें'); setStatus({ type: 'error', message: '⚠️ Select a plan' }); return; }
+
+        const user = dataService.getCurrentUser();
+        if (parseFloat(user.balance || 0) < parseFloat(selectedPlan.amount)) {
+            announceWarning('अपर्याप्त बैलेंस');
+            setStatus({ type: 'error', message: '⚠️ Insufficient balance in wallet' });
+            return;
+        }
+
         setLoading(true); setStatus(null);
         try {
             initSpeech(); announceProcessing("डीटीएच रिचार्ज हो रहा है।");
             const opCode = DTH_PROVIDERS[provider]?.opcode || provider;
-            const res = await fetch(RECHARGE_API, {
+            const res = await fetch(`${BACKEND_URL}/recharge`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mobile: subscriberId, operator: opCode, amount: selectedPlan.amount, serviceType: 'DTH' })
+                body: JSON.stringify({ userId: user.id, mobile: subscriberId, operator: opCode, amount: selectedPlan.amount, serviceType: 'DTH' })
             });
             const result = await res.json();
             if (result.success) {
+                await dataService.logTransaction(user.id, `DTH_${opCode}`, selectedPlan.amount, provider, subscriberId, 'SUCCESS');
                 announceGrandSuccess(
                     `आपका ₹${selectedPlan.amount} का ${provider} डीटीएच रिचार्ज सफल हो गया।`,
                     `सब्सक्राइबर आईडी ${subscriberId} पर ${provider} सेवा सक्रिय हो गई।`
                 );
                 setShowSuccess(true);
-            } else { announceError(result.message || 'डीटीएच रिचार्ज फेल'); setStatus({ type: 'error', message: `❌ ${result.message}` }); }
+            } else {
+                await dataService.logTransaction(user.id, `DTH_${opCode}`, selectedPlan.amount, provider, subscriberId, 'FAILED');
+                announceError(result.message || 'डीटीएच रिचार्ज फेल');
+                setStatus({ type: 'error', message: `❌ ${result.message}` });
+            }
         } catch { announceError('कनेक्शन एरर। डीटीएच रिचार्ज नहीं हो पाया।'); setStatus({ type: 'error', message: '❌ Connection error' }); }
         finally { setLoading(false); }
     };
@@ -601,7 +632,6 @@ function BillTab() {
     }, [consumerNo, biller]);
 
     const doFetch = async () => {
-        // ── Validate opcode before sending to Venus API ──
         const b = typeof biller === 'object' ? biller : null;
         const opCode = b?.opcode;
 
@@ -612,8 +642,8 @@ function BillTab() {
         }
         setFetching(true); setFetchedBill(null); setFetchError(false); setStatus(null);
         try {
-            console.log("[BBPS] Fetching from:", BILL_FETCH_API);
-            const res = await fetch(BILL_FETCH_API, {
+            const user = dataService.getCurrentUser();
+            const res = await fetch(`${BACKEND_URL}/bill-fetch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -622,8 +652,8 @@ function BillTab() {
                     opcode: opCode,
                     category: category?.id,
                     subDiv: '',
-                    dob: dob, // Pass DOB
-                    mobile: dataService.getUser()?.mobile || '9999999999'
+                    dob: dob,
+                    mobile: user?.mobile || '9999999999'
                 })
             });
             if (!res.ok) throw new Error('Backend error');
@@ -636,50 +666,60 @@ function BillTab() {
             }
         } catch {
             setFetchError(true);
-            setStatus({ type: 'error', message: '❌ Connection error. Make sure Node.js backend is running on port 5001.' });
+            setStatus({ type: 'error', message: '❌ Connection error.' });
         } finally { setFetching(false); }
     };
 
     const payBill = async () => {
-        setPaying(true); setStatus(null);
+        const user = dataService.getCurrentUser();
         const billerName = biller?.name || biller;
         const billerOpcode = biller?.opcode;
 
+        if (parseFloat(user.balance || 0) < parseFloat(fetchedBill.amount)) {
+            announceWarning('अपर्याप्त बैलेंस');
+            setStatus({ type: 'error', message: '⚠️ Insufficient balance' });
+            return;
+        }
+
+        setPaying(true); setStatus(null);
         if (!billerOpcode) {
-            setStatus({ type: 'error', message: '❌ Invalid operator code. Please select your biller again.' });
+            setStatus({ type: 'error', message: '❌ Invalid operator code.' });
             setPaying(false);
             return;
         }
         try {
             initSpeech(); announceProcessing("बिल पेमेंट हो रहा है।");
-            const res = await fetch(BILL_PAY_API, {
+            const res = await fetch(`${BACKEND_URL}/bill-pay`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    userId: user.id,
                     biller: billerName,
                     consumerNo,
                     amount: fetchedBill.amount,
                     category: category?.id,
                     opcode: billerOpcode,
-                    dob: dob, // Pass DOB
-                    mobile: dataService.getUser()?.mobile || '9999999999'
+                    dob: dob,
+                    mobile: user?.mobile || '9999999999'
                 })
             });
             const result = await res.json();
-            if (!result.success) {
+            if (result.success) {
+                await dataService.logTransaction(user.id, `BILL_${billerOpcode}`, fetchedBill.amount, billerName, consumerNo, 'SUCCESS');
+                announceGrandSuccess(
+                    `आपका ₹${fetchedBill.amount} का ${billerName} बिल पेमेंट सफल हो गया।`,
+                    `ग्राहक: ${fetchedBill.custName || 'आप'}। रसीद आपके रजिस्टर्ड नंबर पर भेजी गई है।`
+                );
+                const { default: confetti } = await import('canvas-confetti');
+                confetti({ particleCount: 160, spread: 80, origin: { y: 0.5 }, colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8'] });
+                setShowSuccess(true);
+            } else {
+                await dataService.logTransaction(user.id, `BILL_${billerOpcode}`, fetchedBill.amount, billerName, consumerNo, 'FAILED');
                 setStatus({ type: 'error', message: `❌ ${result.message || 'Payment failed'}` });
-                setPaying(false);
-                return;
             }
         } catch (err) {
             console.error('Payment Error:', err);
         }
-        announceGrandSuccess(
-            `आपका ₹${fetchedBill.amount} का ${billerName} बिल पेमेंट सफल हो गया।`,
-            `ग्राहक: ${fetchedBill.custName || 'आप'}। रसीद आपके रजिस्टर्ड नंबर पर भेजी गई है।`
-        );
-        const { default: confetti } = await import('canvas-confetti');
-        confetti({ particleCount: 160, spread: 80, origin: { y: 0.5 }, colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8'] });
-        setShowSuccess(true); setPaying(false);
+        setPaying(false);
     };
 
     const filteredBillers = (category?.billers || []).filter(b => {

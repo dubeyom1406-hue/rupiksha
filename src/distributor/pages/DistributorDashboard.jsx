@@ -89,13 +89,31 @@ const DistributorDashboard = () => {
     const [selectedContact, setSelectedContact] = useState(null);
     const [cardIdx, setCardIdx] = useState(0);
 
-    const load = () => {
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    const load = async () => {
+        setLoading(true);
         const s = sharedDataService.getCurrentDistributor();
         if (!s) return;
-        const fresh = sharedDataService.getDistributorById(s.id) || s;
+
+        // Fetch real balance
+        const userBal = await dataService.getWalletBalance(s.id);
+        const fresh = { ...s, wallet: { balance: userBal } };
         setDist(fresh);
-        const all = dataService.getData().users || [];
-        setRetailers(all.filter(r => (fresh.assignedRetailers || []).includes(r.username)));
+
+        // Fetch all users to find assigned retailers
+        const allUsers = await dataService.getAllUsers();
+        const myRetailers = allUsers.filter(r =>
+            (fresh.assignedRetailers || []).includes(r.username) || r.ownerId === fresh.id
+        );
+        setRetailers(myRetailers);
+
+        // Fetch transactions for this distributor's network if needed
+        // For now, let's just use user transactions for the personal wallet
+        const personalTxns = await dataService.getUserTransactions(s.id);
+        setTransactions(personalTxns);
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -104,10 +122,10 @@ const DistributorDashboard = () => {
         return () => window.removeEventListener('distributorDataUpdated', load);
     }, []);
 
-    const active = retailers.filter(r => r.status === 'Approved');
-    const walletBal = dist?.wallet?.balance || '3,48,200.00';
-    const distName = dist?.name || 'JAY MATA DEE ENT.';
-    const distId = dist?.id || 'DIST-2024-0001';
+    const activeUsers = retailers.filter(r => r.status === 'Approved');
+    const walletBal = dist?.wallet?.balance || '0.00';
+    const distName = dist?.name || 'DISTRIBUTOR';
+    const distId = dist?.id || 'DIST-0001';
     const planCfg = getDistributorPlan(dist);
     const maxR = planCfg.maxRetailers;
     const remainingSlots = getRemainingRetailerSlots(dist, retailers.length);
@@ -115,8 +133,8 @@ const DistributorDashboard = () => {
 
     const stats = [
         { label: 'Wallet Balance', val: walletBal, prefix: '₹', icon: Wallet, iconColor: '#6366f1', bg: '#eef2ff' },
-        { label: 'Commission', val: '18,700', prefix: '₹', icon: TrendingUp, iconColor: '#10b981', bg: '#ecfdf5' },
-        { label: 'Transactions', val: '2,960', prefix: '', icon: Activity, iconColor: '#f59e0b', bg: '#fffbeb' },
+        { label: 'Commission', val: '0', prefix: '₹', icon: TrendingUp, iconColor: '#10b981', bg: '#ecfdf5' },
+        { label: 'Transactions', val: String(transactions.length), prefix: '', icon: Activity, iconColor: '#f59e0b', bg: '#fffbeb' },
         {
             label: maxR === Infinity ? 'Total Retailers' : `Retailers (${retailers.length}/${maxR})`,
             val: String(retailers.length || 0),
@@ -263,25 +281,26 @@ const DistributorDashboard = () => {
                                 ))}
                             </div>
 
-                            {recentTxns.map((t, i) => (
+                            {transactions.length > 0 ? transactions.slice(0, 8).map((t, i) => (
                                 <motion.div key={i}
                                     whileHover={{ backgroundColor: '#f8faff' }}
                                     className="grid grid-cols-[2fr_1fr_1.2fr_auto] gap-4 items-center px-6 py-3.5 border-b border-slate-50 last:border-0 transition-colors cursor-pointer"
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm"
-                                            style={{ background: t.color }}>
-                                            {t.type.charAt(0)}
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm bg-indigo-500">
+                                            {t.service_type?.charAt(0) || 'T'}
                                         </div>
-                                        <p className="text-xs font-black text-slate-800 truncate">{t.name}</p>
+                                        <p className="text-xs font-black text-slate-800 truncate">{t.service_type}</p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-500">{t.type}</p>
-                                    <p className="text-[10px] font-bold text-slate-400">{t.date}</p>
-                                    <p className={`text-xs font-black text-right ${t.up ? 'text-slate-900' : 'text-red-500'}`}>
-                                        {t.amount}
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{t.status}</p>
+                                    <p className="text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString()}</p>
+                                    <p className={`text-xs font-black text-right ${t.status === 'SUCCESS' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        ₹{t.amount}
                                     </p>
                                 </motion.div>
-                            ))}
+                            )) : (
+                                <div className="py-10 text-center text-slate-300 text-[10px] font-black uppercase tracking-[0.25em]">No recent activity</div>
+                            )}
                         </motion.div>
                     </div>
 

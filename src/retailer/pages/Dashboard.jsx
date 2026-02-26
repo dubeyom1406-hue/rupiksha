@@ -174,47 +174,43 @@ const RetailerDashboard = () => {
         if (!currentUser) navigate('/');
     }, [currentUser]);
 
-    useEffect(() => {
-        const fn = () => setAppData(dataService.getData());
-        window.addEventListener('dataUpdated', fn);
-        return () => window.removeEventListener('dataUpdated', fn);
-    }, []);
-
-    /* ── live chart data ────────────────────── */
+    /* ── live chart data (mocked for visual effect) ────────────────────── */
     const mkPoint = () => {
         const now = new Date();
-        const hh = now.getHours().toString().padStart(2, '0');
-        const mm = now.getMinutes().toString().padStart(2, '0');
-        const ss = now.getSeconds().toString().padStart(2, '0');
         return {
-            t: `${hh}:${mm}:${ss}`,
+            t: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`,
             revenue: Math.floor(18000 + Math.random() * 12000),
             expense: Math.floor(6000 + Math.random() * 9000),
         };
     };
-    const initData = Array.from({ length: 12 }, mkPoint);
-    const [liveData, setLiveData] = useState(initData);
-    const [liveStats, setLiveStats] = useState({ rev: initData[initData.length - 1].revenue, exp: initData[initData.length - 1].expense });
+    const [liveData, setLiveData] = useState(Array.from({ length: 12 }, mkPoint));
+    const [liveStats, setLiveStats] = useState({ rev: 15000, exp: 5000 });
 
     useEffect(() => {
         const id = setInterval(() => {
             const pt = mkPoint();
             setLiveData(prev => [...prev.slice(-11), pt]);
             setLiveStats({ rev: pt.revenue, exp: pt.expense });
-        }, 2000);
+        }, 3000);
         return () => clearInterval(id);
     }, []);
 
-    /* ── donut ──────────────────────────────── */
-    const scoreData = [{ v: 690 }, { v: 310 }];
-
     /* ── transactions ───────────────────────── */
-    const txns = [
-        { name: 'John Lux', sub: 'Online Transfer', date: '21st Jun, 2022', time: '04:02:38 PM', amt: '$180.00', st: 'Pending', stColor: 'amber', av: 'https://i.pravatar.cc/36?u=1' },
-        { name: 'Spotify', sub: 'Subscription', date: '19th Jun, 2022', time: '02:29:10 PM', amt: '$18.00', st: 'Completed', stColor: 'emerald', av: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/168px-Spotify_logo_without_text.svg.png' },
-        { name: 'Amazon', sub: 'Purchase', date: '18th Jun, 2022', time: '11:15:00 AM', amt: '$245.50', st: 'Failed', stColor: 'rose', av: 'https://upload.wikimedia.org/wikipedia/commons/d/de/Amazon_icon.png' },
-        { name: 'Pinterest', sub: 'Subscription', date: '17th Jun, 2022', time: '09:45:22 AM', amt: '$5.00', st: 'Completed', stColor: 'emerald', av: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png' },
-    ];
+    const [transactions, setTransactions] = useState([]);
+    const [balance, setBalance] = useState("0.00");
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            const user = dataService.getCurrentUser();
+            if (user) {
+                const bal = await dataService.getWalletBalance(user.id);
+                setBalance(bal);
+                const txs = await dataService.getUserTransactions(user.id);
+                setTransactions(txs.slice(0, 5));
+            }
+        };
+        fetchDashboardData();
+    }, []);
 
     const recentAvatars = [
         'https://i.pravatar.cc/40?u=ra',
@@ -280,7 +276,7 @@ const RetailerDashboard = () => {
                                     </div>
                                     <div>
                                         <p className="text-[9px] text-blue-200 font-bold uppercase tracking-[0.18em] mb-0.5">Available Balance</p>
-                                        <p className="text-[19px] font-black text-white tracking-tight leading-none">₹1,82,245<span className="text-sm text-blue-300 font-semibold">.95</span></p>
+                                        <p className="text-[19px] font-black text-white tracking-tight leading-none">₹{Number(balance).toLocaleString('en-IN')}</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -454,27 +450,31 @@ const RetailerDashboard = () => {
 
                             {/* Rows */}
                             <div className="divide-y divide-slate-50">
-                                {txns.map((t, i) => (
+                                {transactions.length > 0 ? transactions.map((t, i) => (
                                     <div key={i} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors">
                                         {/* Avatar */}
-                                        <div className="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100">
-                                            <img src={t.av} alt="" className="w-full h-full object-cover" />
+                                        <div className="w-9 h-9 rounded-full bg-slate-900 flex-shrink-0 flex items-center justify-center text-white text-[10px] font-black overflow-hidden border border-slate-100">
+                                            {t.service?.charAt(0) || 'T'}
                                         </div>
                                         {/* Name / type */}
-                                        <div>
-                                            <p className="text-[13px] font-semibold text-slate-800">{t.name}</p>
-                                            <p className="text-[11px] text-slate-400">{t.sub}</p>
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-bold text-slate-800 truncate">{t.service}</p>
+                                            <p className="text-[10px] text-slate-400">TXN: {t.id}</p>
                                         </div>
                                         {/* Date */}
-                                        <p className="text-[11px] text-slate-400 hidden sm:block">{t.date}</p>
+                                        <p className="text-[11px] text-slate-400 hidden sm:block">{new Date(t.timestamp).toLocaleDateString()}</p>
                                         {/* Time */}
-                                        <p className="text-[11px] text-slate-400 hidden md:block">{t.time}</p>
+                                        <p className="text-[11px] text-slate-400 hidden md:block">{new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         {/* Amount */}
-                                        <p className="text-[13px] font-bold text-slate-800">{t.amt}</p>
+                                        <p className="text-[13px] font-black text-slate-800">₹{t.amount}</p>
                                         {/* Status */}
-                                        <Badge color={t.stColor}>{t.st}</Badge>
+                                        <Badge color={t.status === 'SUCCESS' ? 'emerald' : t.status === 'FAILED' ? 'rose' : 'amber'}>{t.status}</Badge>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="py-12 text-center">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No Recent Transactions</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

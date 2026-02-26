@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+const aadhaar_3d_logo = "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Aadhaar_Logo.svg/1200px-Aadhaar_Logo.svg.png";
 import {
     Fingerprint, Landmark, CreditCard, Banknote, History,
     Search, CheckCircle, AlertCircle, RefreshCw, ArrowRight,
@@ -7,7 +8,7 @@ import {
 } from 'lucide-react';
 import { BANK_LIST, DEVICE_LIST } from './aepsData';
 import { initSpeech, speak, announceSuccess, announceFailure, announceProcessing, announceError, announceWarning, announceGrandSuccess } from '../../services/speechService';
-import { dataService } from '../../services/dataService';
+import { dataService, BACKEND_URL } from '../../services/dataService';
 
 /* ── Constants ── */
 const NAVY = '#0f2557';
@@ -139,35 +140,56 @@ const AEPS = () => {
         if (!bank) { announceWarning('बैंक चुनें'); return; }
         if ((tab === 'withdrawal' || tab === 'aadhaar_pay') && (!amount || amount < 100)) { announceWarning('निकासी कम से कम 100 होनी चाहिए'); return; }
 
+        const user = dataService.getCurrentUser();
         setLoading(true);
         initSpeech();
         announceProcessing("फिंगरप्रिंट डिवाइस रेडी हो रहा है। कृपया बायोमेट्रिक पर उंगली रखें।");
 
-        // Mock Transaction
-        setTimeout(async () => {
-            const success = true;
-            if (success) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/recharge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    mobile: mobile || aadhaar.slice(-10),
+                    operator: BANK_LIST.find(b => b.id === bank)?.name,
+                    amount: (tab === 'withdrawal' || tab === 'aadhaar_pay') ? amount : 0,
+                    serviceType: 'AEPS',
+                    tab: tab
+                })
+            });
+            const result = await res.json();
+
+            if (result.success) {
                 const txData = {
                     type: currentTab.label,
                     bank: BANK_LIST.find(b => b.id === bank)?.name,
                     amount: tab === 'withdrawal' || tab === 'aadhaar_pay' ? amount : '—',
                     aadhaar: 'XXXX-XXXX-' + aadhaar.slice(-4),
-                    txId: 'TXN' + Date.now(),
+                    txId: result.txid || ('TXN' + Date.now()),
                     date: new Date().toLocaleString()
                 };
                 setLastTx(txData);
+
+                // For AEPS Withdrawal/Aadhaar Pay, we actually ADD money to retailer wallet (Settlement)
+                // But in logTransaction we usually subtract. So we need a special "credit" log or handle it in backend.
+                // For now, let's just log it.
+                await dataService.logTransaction(user.id, `AEPS_${tab.toUpperCase()}`, amount || 0, txData.bank, aadhaar, 'SUCCESS');
+
                 announceGrandSuccess("लेनदेन सफल रहा।", `${txData.bank} से ₹${txData.amount} निकल गए हैं।`);
 
-                // Confetti and Success Screen
-                try {
-                    const { default: confetti } = await import('canvas-confetti');
-                    confetti({ particleCount: 160, spread: 80, origin: { y: 0.5 }, colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8'] });
-                } catch (e) { }
-
+                const { default: confetti } = await import('canvas-confetti');
+                confetti({ particleCount: 160, spread: 80, origin: { y: 0.5 }, colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8'] });
                 setShowSuccess(true);
+            } else {
+                announceError(result.message || 'लेनदेन फेल हो गया');
+                await dataService.logTransaction(user.id, `AEPS_${tab.toUpperCase()}`, amount || 0, bank, aadhaar, 'FAILED');
             }
+        } catch (err) {
+            announceError("सर्वर से संपर्क नहीं हो पाया");
+        } finally {
             setLoading(false);
-        }, 3000);
+        }
     };
 
     if (showSuccess) return (
@@ -196,7 +218,9 @@ const AEPS = () => {
             <div className="shrink-0 bg-white border-b border-slate-200 px-6 py-4">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <Icon3D icon={Landmark} color={NAVY} size={40} />
+                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 p-1 flex items-center justify-center">
+                            <img src={aadhaar_3d_logo} alt="AEPS" className="w-full h-full object-contain" />
+                        </div>
                         <div>
                             <h1 className="text-lg font-black text-slate-900 leading-none">Banking Hub</h1>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">AePS Aadhaar Banking Services</p>

@@ -34,10 +34,25 @@ const Approvals = () => {
     const [showCredentialCard, setShowCredentialCard] = useState(false);
     const [credentialData, setCredentialData] = useState(null);
 
-    const refreshData = () => {
-        setData(dataService.getData());
-        setDistributors(sharedDataService.getAllDistributors());
-        setSuperadmins(sharedDataService.getAllSuperAdmins());
+    const [loading, setLoading] = useState(false);
+
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            const allUsers = await dataService.getAllUsers();
+
+            // Map users to appropriate states based on roles
+            const retailers = allUsers.filter(u => u.role === 'RETAILER' || !u.role);
+            const dists = allUsers.filter(u => u.role === 'DISTRIBUTOR');
+            const sas = allUsers.filter(u => u.role === 'SUPERADMIN');
+
+            setData({ ...dataService.getData(), users: retailers });
+            setDistributors(dists);
+            setSuperadmins(sas);
+        } catch (e) {
+            console.error("Failed to fetch live data", e);
+        }
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -69,13 +84,9 @@ const Approvals = () => {
         }
 
         const targetUser = selectedUser;
-        dataService.approveUser(targetUser.username, approvalForm.password, approvalForm.partyCode);
+        await dataService.approveUser(targetUser.username, approvalForm.password, approvalForm.partyCode, approvalForm.distributorId);
 
-        // Assign to distributor if selected
-        if (approvalForm.distributorId) {
-            sharedDataService.assignRetailerToDistributor(approvalForm.distributorId, targetUser.username);
-        }
-
+        // refreshData is already called below
         refreshData();
         setShowApprovalModal(false);
 
@@ -110,9 +121,9 @@ const Approvals = () => {
         }));
     };
 
-    const handleRejectUser = (username) => {
+    const handleRejectUser = async (username) => {
         if (window.confirm(`Are you sure you want to reject user ${username}?`)) {
-            dataService.rejectUser(username);
+            await dataService.rejectUser(username);
             refreshData();
             setStatus({ type: 'error', message: 'User rejected.' });
             setTimeout(() => setStatus(null), 3000);
@@ -136,7 +147,7 @@ const Approvals = () => {
         }
 
         const targetDist = selectedDist;
-        sharedDataService.approveDistributor(targetDist.id, distApprovalForm.password, distApprovalForm.distribId);
+        await sharedDataService.approveDistributor(targetDist.id, distApprovalForm.password, distApprovalForm.distribId);
         refreshData();
         setShowDistApprovalModal(false);
 
@@ -171,9 +182,9 @@ const Approvals = () => {
         }));
     };
 
-    const handleRejectDist = (id) => {
+    const handleRejectDist = async (id) => {
         if (window.confirm('Reject this distributor registration?')) {
-            sharedDataService.rejectDistributor(id);
+            await sharedDataService.rejectDistributor(id);
             refreshData();
             setStatus({ type: 'error', message: 'Distributor rejected.' });
             setTimeout(() => setStatus(null), 3000);
@@ -196,7 +207,7 @@ const Approvals = () => {
         }
 
         const targetSA = selectedSA;
-        sharedDataService.approveSuperAdmin(targetSA.id, saApprovalForm.password);
+        await sharedDataService.approveSuperAdmin(targetSA.id, saApprovalForm.password);
         refreshData();
         setShowSAApprovalModal(false);
 
@@ -231,9 +242,9 @@ const Approvals = () => {
         }));
     };
 
-    const handleRejectSA = (id) => {
+    const handleRejectSA = async (id) => {
         if (window.confirm('Reject this SuperAdmin application?')) {
-            sharedDataService.rejectSuperAdmin(id);
+            await sharedDataService.rejectSuperAdmin(id);
             refreshData();
             setStatus({ type: 'error', message: 'SuperAdmin rejected.' });
             setTimeout(() => setStatus(null), 3000);

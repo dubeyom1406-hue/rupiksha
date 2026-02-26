@@ -87,7 +87,7 @@ const Admin = () => {
 
         setSaVerifying(true);
         try {
-            const newSA = sharedDataService.registerSuperAdmin({
+            const newSA = await sharedDataService.registerSuperAdmin({
                 ...saForm,
                 status: 'Approved'
             });
@@ -108,7 +108,7 @@ const Admin = () => {
 
                 setCreatedCredentials(creds);
                 setShowSuccessView(true);
-                refreshData();
+                await refreshData();
                 setShowAddSAModal(false);
                 setShowSAOTPView(false);
                 setSaForm({ name: '', businessName: '', mobile: '', email: '', password: '', city: '', state: 'Bihar' });
@@ -145,7 +145,7 @@ const Admin = () => {
 
         setDistVerifying(true);
         try {
-            const newDist = sharedDataService.registerDistributor({
+            const newDist = await sharedDataService.registerDistributor({
                 ...distForm,
                 status: 'Approved'
             }, distForm.ownerId || null);
@@ -189,10 +189,22 @@ const Admin = () => {
         }
     };
 
-    const refreshData = () => {
-        setData(dataService.getData());
-        setDistributors(sharedDataService.getAllDistributors());
-        setSuperadmins(sharedDataService.getAllSuperAdmins());
+    const refreshData = async () => {
+        try {
+            const allUsers = await dataService.getAllUsers();
+
+            // Filter users by role
+            const retailers = allUsers.filter(u => u.role === 'RETAILER' || !u.role);
+            const dists = allUsers.filter(u => u.role === 'DISTRIBUTOR');
+            const sas = allUsers.filter(u => u.role === 'SUPER_DISTRIBUTOR' || u.role === 'SUPERADMIN' || u.role === 'ADMIN');
+
+            const currentData = dataService.getData();
+            setData({ ...currentData, users: retailers });
+            setDistributors(dists);
+            setSuperadmins(sas);
+        } catch (e) {
+            console.error("Failed to refresh live data", e);
+        }
     };
 
     // Listen for distributor and superadmin data changes
@@ -224,9 +236,9 @@ const Admin = () => {
         }
     };
 
-    const handleLoginAsRetailer = (username) => {
+    const handleLoginAsRetailer = async (username) => {
         // Use the admin's own password as the master key
-        const result = dataService.loginUser(username, 'admin');
+        const result = await dataService.loginUser(username, 'admin');
         if (result.success) {
             navigate('/dashboard');
         } else {
@@ -568,12 +580,7 @@ const Admin = () => {
         }
 
         const targetUser = selectedUser;
-        dataService.approveUser(targetUser.username, approvalForm.password, approvalForm.partyCode);
-
-        // Assign to distributor if selected
-        if (approvalForm.distributorId) {
-            sharedDataService.assignRetailerToDistributor(approvalForm.distributorId, targetUser.username);
-        }
+        await dataService.approveUser(targetUser.username, approvalForm.password, approvalForm.partyCode, approvalForm.distributorId);
 
         refreshData();
         setShowApprovalModal(false);
@@ -612,10 +619,10 @@ const Admin = () => {
     };
 
 
-    const handleReject = (username) => {
+    const handleReject = async (username) => {
         if (window.confirm(`Are you sure you want to reject and delete user ${username}?`)) {
-            dataService.rejectUser(username);
-            setData(dataService.getData());
+            await dataService.rejectUser(username);
+            refreshData();
             setStatus({ type: 'error', message: `User ${username} rejected and removed.` });
             setTimeout(() => setStatus(null), 3000);
         }

@@ -3,7 +3,29 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const axios = require('axios');
 const { XMLParser } = require('fast-xml-parser');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
+
+// --- MySQL Database Connection Pool
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || 'Plmnkopo@09',
+    database: process.env.DB_NAME || 'rupiksha',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Verify DB Connection
+pool.getConnection()
+    .then(conn => {
+        console.log("✅ Database Connected Successfully");
+        conn.release();
+    })
+    .catch(err => {
+        console.log("❌ Database Connection Failed:", err.message);
+    });
 
 // ── Venus BBPS Config (Confirmed Real Credentials)
 const BBPS_BASE = 'https://venusrecharge.co.in';
@@ -26,6 +48,14 @@ app.use((req, res, next) => {
 // Health Check Route
 app.get('/', (req, res) => {
     res.send('<h1>RuPiKsha OTP Server is Running!</h1><p>The system is ready to send professional emails.</p>');
+});
+
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'online' });
+});
+
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'online' });
 });
 
 // Temporary in-memory storage for OTPs
@@ -248,9 +278,297 @@ app.post('/api/verify-otp', (req, res) => {
     }
 });
 
+// --- COMMISSION MANAGEMENT ---
+
+// Get all commissions
+app.get('/api/commissions', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM commissions');
+        res.json({ success: true, commissions: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Update a commission
+app.post('/api/commissions/update', async (req, res) => {
+    const { id, value } = req.body;
+    try {
+        await pool.query('UPDATE commissions SET value = ? WHERE id = ?', [value, id]);
+        res.json({ success: true, message: "Commission updated successfully" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- PORTAL CONFIG ---
+app.get('/api/portal-config', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM admin_portal WHERE id = 1');
+        res.json({ success: true, config: rows[0] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/my-retailers', async (req, res) => {
+    const { parentId } = req.query;
+    try {
+        const [rows] = await pool.query('SELECT * FROM users WHERE parent_id = ?', [parentId]);
+        res.json({ success: true, retailers: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/update-portal-config', async (req, res) => {
+    const { news_ticker, support_number, support_email } = req.body;
+    try {
+        await pool.query(
+            'UPDATE admin_portal SET news_ticker = ?, support_number = ?, support_email = ? WHERE id = 1',
+            [news_ticker, support_number, support_email]
+        );
+        res.json({ success: true, message: "Portal configuration updated" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Endpoint to Verify Account
 app.post('/api/verify-account', (req, res) => {
     res.status(200).json({ success: true, accountHolderName: "MR. OM DUBEY" });
+});
+
+// --- USER & AUTH ---
+
+app.post('/api/register', async (req, res) => {
+    const { username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status } = req.body;
+
+    // Robust fallbacks for self-registration
+    const finalUsername = username || mobile || `user_${Date.now()}`;
+    const finalPassword = password || '123456'; // Default temporary password
+    const finalRole = role || 'RETAILER';
+
+    try {
+        const sql = 'INSERT INTO users (username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const vals = [finalUsername, finalPassword, name, finalRole, parent_id || null, business_name || '', email, mobile, city || '', state, address || '', pincode || '', status || 'Pending'];
+
+        console.log("📝 EXECUTING REGISTRATION QUERY...");
+        // console.log(sql, vals);
+
+        const [result] = await pool.query(sql, vals);
+        const userId = result.insertId;
+        // Create wallet for new user
+        await pool.query('INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)', [userId]);
+        res.json({ success: true, userId });
+    } catch (err) {
+        console.error("❌ REGISTRATION FAILED:", err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/approve-user', async (req, res) => {
+    const { username, password, status, partyCode, parent_id } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET status = ?, password = ?, partyCode = ?, parent_id = ? WHERE username = ?',
+            [status || 'Approved', password, partyCode || null, parent_id || null, username]
+        );
+        res.json({ success: true, message: "User status updated" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/update-profile', async (req, res) => {
+    const { userId, name, email, business_name, address, city, state, pincode } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET name = ?, email = ?, business_name = ?, address = ?, city = ?, state = ?, pincode = ? WHERE id = ?',
+            [name, email, business_name, address, city, state, pincode, userId]
+        );
+        res.json({ success: true, message: "Profile updated successfully" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    const { username, password, location } = req.body;
+    try {
+        // Search by username or mobile
+        const [users] = await pool.query(
+            'SELECT * FROM users WHERE (username = ? OR mobile = ?) AND password = ?',
+            [username, username, password]
+        );
+
+        if (users.length > 0) {
+            const user = users[0];
+            if (user.status !== 'Approved') {
+                await pool.query('INSERT INTO login_logs (user_id, status) VALUES (?, "PENDING_APPROVAL")', [user.id]);
+                return res.json({ success: false, message: "Account pending approval" });
+            }
+            // Update Location if provided
+            if (location && location.lat && location.lng) {
+                await pool.query('UPDATE users SET latitude = ?, longitude = ? WHERE id = ?', [location.lat, location.lng, user.id]);
+            }
+
+            // Log Success
+            await pool.query('INSERT INTO login_logs (user_id, status) VALUES (?, "SUCCESS")', [user.id]);
+
+            // Fetch wallet balance
+            const [wallets] = await pool.query('SELECT balance FROM wallets WHERE user_id = ?', [user.id]);
+            user.balance = wallets[0]?.balance || 0;
+
+            // Fetch assigned plan
+            const [p] = await pool.query(
+                'SELECT p.* FROM plans p JOIN user_plans up ON p.id = up.plan_id WHERE up.user_id = ?',
+                [user.id]
+            );
+            user.plan = p[0] || null;
+
+            res.json({ success: true, user });
+        } else {
+            res.json({ success: false, message: "Invalid credentials" });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- KYC MANAGEMENT ---
+app.post('/api/upload-kyc', async (req, res) => {
+    const { userId, docType, docNumber, filePath } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO kyc_documents (user_id, doc_type, doc_number, file_path, status) VALUES (?, ?, ?, ?, "PENDING") ON DUPLICATE KEY UPDATE doc_number = ?, file_path = ?, status = "PENDING"',
+            [userId, docType, docNumber, filePath, docNumber, filePath]
+        );
+        res.json({ success: true, message: "Document uploaded for verification" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/kyc-status', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [rows] = await pool.query('SELECT * FROM kyc_documents WHERE user_id = ?', [userId]);
+        res.json({ success: true, documents: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- SUPPORT TICKETS ---
+app.post('/api/raise-ticket', async (req, res) => {
+    const { userId, subject, message, priority } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO support_tickets (user_id, subject, message, priority, status) VALUES (?, ?, ?, ?, "OPEN")',
+            [userId, subject, message, priority || 'MEDIUM']
+        );
+        res.json({ success: true, message: "Ticket raised successfully. Our team will contact you soon." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/my-tickets', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const [rows] = await pool.query('SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+        res.json({ success: true, tickets: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/transactions', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ success: false, message: "Missing UserID" });
+    try {
+        const [rows] = await pool.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 100', [userId]);
+        const transactions = rows.map(r => ({
+            id: r.txn_id,
+            timestamp: r.timestamp,
+            service: r.service_type,
+            amount: parseFloat(r.amount),
+            status: r.status,
+            details: r.details ? (typeof r.details === 'string' ? JSON.parse(r.details) : r.details) : {}
+        }));
+        res.json({ success: true, transactions });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/plans', async (req, res) => {
+    const { role } = req.query;
+    try {
+        let query = 'SELECT * FROM plans WHERE active = TRUE';
+        const params = [];
+        if (role) {
+            query += ' AND role_type = ?';
+            params.push(role);
+        }
+        const [rows] = await pool.query(query, params);
+        res.json({ success: true, plans: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Get Wallet Balance
+app.post('/api/get-balance', async (req, res) => {
+    const { userId } = req.body;
+    try {
+        const [wallets] = await pool.query('SELECT balance FROM wallets WHERE user_id = ?', [userId]);
+        res.json({ success: true, balance: wallets[0]?.balance || 0 });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/assign-plan', async (req, res) => {
+    const { userId, planId } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO user_plans (user_id, plan_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE plan_id = ?',
+            [userId, planId, planId]
+        );
+        res.json({ success: true, message: "Plan assigned successfully" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Update Wallet (Add/Deduct Money)
+app.post('/api/update-wallet', async (req, res) => {
+    const { userId, amount, type } = req.body; // type: 'add' or 'deduct'
+    try {
+        const change = type === 'add' ? amount : -amount;
+        await pool.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [change, userId]);
+        const [updated] = await pool.query('SELECT balance FROM wallets WHERE user_id = ?', [userId]);
+        res.json({ success: true, balance: updated[0].balance });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Log Database Transaction
+app.post('/api/log-txn', async (req, res) => {
+    const { userId, service, amount, operator, number, status } = req.body;
+    const txnId = 'RPK' + Date.now();
+    try {
+        await pool.query(
+            'INSERT INTO transactions (txn_id, user_id, service_type, operator_name, number, amount, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [txnId, userId, service, operator, number, amount, status || 'SUCCESS']
+        );
+        res.json({ success: true, txnId });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // Endpoint to Check Venus Balance (Documentation)
@@ -356,8 +674,8 @@ app.post('/api/recharge', async (req, res) => {
 // ══════════════════════════════════════════════
 // 📡 BILL FETCH — REAL VENUS BBPS API
 // ══════════════════════════════════════════════
-app.get('/api/bill-fetch', async (req, res) => {
-    const { consumerNo, mobile, opcode, subDiv } = req.query;
+app.post('/api/bill-fetch', async (req, res) => {
+    const { consumerNo, mobile, opcode, subDiv } = req.body;
 
     const normalizedOp = (opcode || '').toString().trim().toUpperCase();
     if (!opcode || normalizedOp === 'UNDEFINED' || normalizedOp === 'NULL' || normalizedOp === 'NONE' || normalizedOp === '' || normalizedOp.length < 3) {
@@ -526,6 +844,34 @@ app.all('/api/callback', (req, res) => {
 
     // Venus expects a 'SUCCESS' or 'OK' string response usually
     res.status(200).send('SUCCESS');
+});
+
+app.get('/api/all-users', async (req, res) => {
+    try {
+        const [users] = await pool.query(`
+            SELECT u.*, w.balance 
+            FROM users u 
+            LEFT JOIN wallets w ON u.id = w.user_id
+        `);
+        res.json({ success: true, users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/all-transactions', async (req, res) => {
+    try {
+        const [transactions] = await pool.query(`
+            SELECT t.*, u.username, u.name as user_name 
+            FROM transactions t
+            LEFT JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC 
+            LIMIT 500
+        `);
+        res.json({ success: true, transactions });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 5001;

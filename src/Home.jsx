@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import logo from './assets/rupiksha_logo.png';
+const aadhaar_3d_logo = "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Aadhaar_Logo.svg/1200px-Aadhaar_Logo.svg.png";
 
 /* ─────────────────────────────────────────────
    Tiny hook: trigger in-view class once element
@@ -87,6 +89,55 @@ function SectionHead({ tag, title, sub, center = true }) {
 ══════════════════════════════════════════════ */
 const SERVICES = [
     {
+        label: 'AEPS',
+        subtitle: 'Aadhaar Enabled Payment System',
+        desc: 'Aadhaar Enabled Payment System allows customers to perform banking transactions using their Aadhaar number and biometric authentication.',
+        features: ['Cash withdrawals using Aadhaar authentication', 'Cash deposits to any bank account', 'Balance enquiry', 'Mini statements', 'Aadhaar Pay for merchant payments', 'Interoperable across all banks'],
+        grad: 'linear-gradient(160deg,#14532d 0%,#15803d 60%,#16a34a 100%)',
+        glow: 'rgba(22,163,74,0.6)', tag: 'RBI Certified',
+        img: aadhaar_3d_logo,
+    },
+    {
+        emoji: '🏦', label: 'Banking Services',
+        subtitle: 'Comprehensive Banking Solutions',
+        desc: 'Extend banking services to your customers as a Business Correspondent. Provide account opening, cash deposits, withdrawals, and more.',
+        features: ['Account opening for multiple banks', 'Cash deposits and withdrawals', 'Balance enquiry and mini statements', 'Fixed and recurring deposit creation', 'Micro-ATM services'],
+        grad: 'linear-gradient(160deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%)',
+        glow: 'rgba(37,99,235,0.6)', tag: 'Pan India',
+    },
+    {
+        emoji: '🤝', label: 'Micro Loans',
+        subtitle: '₹5,000 – ₹50,000 Quick Loans',
+        desc: "Facilitate small loans for your customers' immediate needs. Our platform connects borrowers with lenders for quick and hassle-free loan disbursals.",
+        features: ['Small ticket loans from ₹5,000 to ₹50,000', 'Quick approval process', 'Minimal documentation', 'Flexible repayment options', 'No collateral required'],
+        grad: 'linear-gradient(160deg,#164e63 0%,#0891b2 60%,#06b6d4 100%)',
+        glow: 'rgba(8,145,178,0.6)', tag: 'Fast Approval',
+    },
+    {
+        emoji: '💳', label: 'Neo Banking',
+        subtitle: 'Digital Banking Platform',
+        desc: 'Offer digital banking services with enhanced features and user experience. Our neo-banking platform provides a modern alternative to traditional banking.',
+        features: ['Digital savings accounts', 'Virtual debit cards', 'Real-time transaction notifications', 'Goal-based savings', 'Integrated investment options'],
+        grad: 'linear-gradient(160deg,#1c1917 0%,#292524 60%,#44403c 100%)',
+        glow: 'rgba(68,64,60,0.7)', tag: 'New',
+    },
+    {
+        emoji: '🏠', label: 'CSP',
+        subtitle: 'Customer Service Point',
+        desc: 'Transform your shop into a Customer Service Point. Provide essential banking and government services to your local community.',
+        features: ['Dedicated banking outlet', 'Agent registration', 'Multiple bank connectivity', 'Local area service provider'],
+        grad: 'linear-gradient(160deg,#713f12 0%,#a16207 60%,#ca8a04 100%)',
+        glow: 'rgba(202,138,4,0.6)', tag: 'Business Opportunity',
+    },
+    {
+        emoji: '💼', label: 'BC',
+        subtitle: 'Business Correspondent',
+        desc: 'Act as a Business Correspondent for leading banks. Facilitate secure transactions and financial inclusion in underserved areas.',
+        features: ['Bank-authorized agent', 'Secure cash management', 'Customer enrollment', 'Financial literacy support'],
+        grad: 'linear-gradient(160deg,#581c87 0%,#7c3aed 60%,#8b5cf6 100%)',
+        glow: 'rgba(124,58,237,0.6)', tag: 'Certified Agent',
+    },
+    {
         emoji: '💸', label: 'Money Transfer',
         subtitle: 'DMT / IMPS / NEFT / RTGS',
         desc: 'Secure and instant domestic money transfers to any bank account in India. Our IMPS, NEFT, and UPI enabled services ensure your customers can send money anywhere, anytime.',
@@ -109,38 +160,6 @@ const SERVICES = [
         features: ['Mobile prepaid recharges', 'DTH recharges', 'Data card recharges', 'Postpaid bill payments', 'Special recharge offers and cashbacks', 'Scheduled recharges'],
         grad: 'linear-gradient(160deg,#581c87 0%,#7c3aed 60%,#8b5cf6 100%)',
         glow: 'rgba(124,58,237,0.6)', tag: 'Instant Credit',
-    },
-    {
-        emoji: '🏦', label: 'Banking Services',
-        subtitle: 'Business Correspondent',
-        desc: 'Extend banking services to your customers as a Business Correspondent. Provide account opening, cash deposits, withdrawals, and more.',
-        features: ['Account opening for multiple banks', 'Cash deposits and withdrawals', 'Balance enquiry and mini statements', 'Fixed and recurring deposit creation', 'Loan application and processing', 'Micro-ATM services'],
-        grad: 'linear-gradient(160deg,#9f1239 0%,#be185d 60%,#ec4899 100%)',
-        glow: 'rgba(190,24,93,0.6)', tag: 'Pan India',
-    },
-    {
-        emoji: '🏧', label: 'AEPS',
-        subtitle: 'Aadhaar Enabled Payment System',
-        desc: 'Aadhaar Enabled Payment System allows customers to perform banking transactions using their Aadhaar number and biometric authentication.',
-        features: ['Cash withdrawals using Aadhaar authentication', 'Cash deposits to any bank account', 'Balance enquiry', 'Mini statements', 'Aadhaar Pay for merchant payments', 'Interoperable across all banks'],
-        grad: 'linear-gradient(160deg,#14532d 0%,#15803d 60%,#16a34a 100%)',
-        glow: 'rgba(22,163,74,0.6)', tag: 'RBI Certified',
-    },
-    {
-        emoji: '🤝', label: 'Micro Loans',
-        subtitle: '₹5,000 – ₹50,000 Quick Loans',
-        desc: "Facilitate small loans for your customers' immediate needs. Our platform connects borrowers with lenders for quick and hassle-free loan disbursals.",
-        features: ['Small ticket loans from ₹5,000 to ₹50,000', 'Quick approval process', 'Minimal documentation', 'Flexible repayment options', 'Transparent interest rates', 'No collateral required'],
-        grad: 'linear-gradient(160deg,#164e63 0%,#0891b2 60%,#06b6d4 100%)',
-        glow: 'rgba(8,145,178,0.6)', tag: 'Fast Approval',
-    },
-    {
-        emoji: '💳', label: 'Neo Banking',
-        subtitle: 'Digital Banking Platform',
-        desc: 'Offer digital banking services with enhanced features and user experience. Our neo-banking platform provides a modern alternative to traditional banking.',
-        features: ['Digital savings accounts', 'Virtual debit cards', 'Real-time transaction notifications', 'Expense categorization and budgeting', 'Goal-based savings', 'Integrated investment options'],
-        grad: 'linear-gradient(160deg,#1c1917 0%,#292524 60%,#44403c 100%)',
-        glow: 'rgba(68,64,60,0.7)', tag: 'New',
     },
     {
         emoji: '✈️', label: 'Tours & Travel',
@@ -169,10 +188,10 @@ const SERVICES = [
 ];
 
 const STATS = [
-    { num: '50K+', label: 'Active Retailers' },
-    { num: '₹200Cr+', label: 'Monthly Volume' },
-    { num: '99.9%', label: 'Uptime SLA' },
-    { num: '28', label: 'States Covered' },
+    { num: '100', label: 'Cities Covered', suffix: '+' },
+    { num: '50K', label: 'Active Retailers', suffix: '+' },
+    { num: '200', label: 'Monthly Volume', prefix: '₹', suffix: 'Cr+' },
+    { num: '99.9', label: 'Uptime SLA', suffix: '%' },
 ];
 
 const HOW = [
@@ -202,16 +221,67 @@ const FEATURES = [
 /* ══════════════════════════════════════════════
    NAVBAR
 ══════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────
+   Animated Counter component
+───────────────────────────────────────────── */
+function Counter({ end, duration = 2000, prefix = "", suffix = "" }) {
+    const [count, setCount] = useState(0);
+    const [ref, visible] = useInView(0.1);
+    const hasAnimated = useRef(false);
+
+    useEffect(() => {
+        if (visible && !hasAnimated.current) {
+            hasAnimated.current = true;
+            let startTime;
+            const endVal = parseFloat(end);
+
+            const animate = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+
+                // Ease out expo
+                const easedProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+
+                setCount(easedProgress * endVal);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            requestAnimationFrame(animate);
+        }
+    }, [visible, end, duration]);
+
+    return (
+        <b ref={ref} className="rp-stat-num">
+            {prefix}{count.toLocaleString(undefined, {
+                minimumFractionDigits: end.includes('.') ? 1 : 0,
+                maximumFractionDigits: end.includes('.') ? 1 : 0,
+            })}{suffix}
+        </b>
+    );
+}
+
+/* ══════════════════════════════════════════════
+   NAVBAR
+   • Premium glass design
+   • Improved mobile menu
+══════════════════════════════════════════════ */
 function Navbar() {
     const navigate = useNavigate();
     const [scrolled, setScrolled] = useState(false);
     const [menu, setMenu] = useState(false);
+
     useEffect(() => {
-        const h = () => setScrolled(window.scrollY > 40);
+        const h = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', h);
         return () => window.removeEventListener('scroll', h);
     }, []);
-    const scroll = id => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); setMenu(false); };
+
+    const scroll = id => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+        setMenu(false);
+    };
 
     return (
         <nav className={`rp-nav ${scrolled ? 'rp-nav--scrolled' : ''}`}>
@@ -221,30 +291,38 @@ function Navbar() {
                     <img src={logo} alt="Rupiksha" className="rp-nav__logo" />
                 </div>
 
-                {/* Links */}
-                <div className={`rp-nav__links ${menu ? 'rp-nav__links--open' : ''}`}>
-                    <button className="rp-nav__link" onClick={() => navigate('/about')}>
-                        About Us
-                    </button>
-                    <button className="rp-nav__link" onClick={() => navigate('/contact')}>
-                        Contact
-                    </button>
-                    {['services', 'how', 'features', 'testimonials', 'contact'].map(id => (
-                        <button key={id} className="rp-nav__link" onClick={() => scroll(id)}>
-                            {id.charAt(0).toUpperCase() + id.slice(1)}
-                        </button>
-                    ))}
+                {/* Desktop Links */}
+                <div className="rp-nav__desktop">
+                    <button className="rp-nav__link" onClick={() => navigate('/about')}>About Us</button>
+                    <button className="rp-nav__link" onClick={() => scroll('services')}>Services</button>
+                    <button className="rp-nav__link" onClick={() => scroll('how')}>Process</button>
+                    <button className="rp-nav__link" onClick={() => navigate('/contact')}>Contact</button>
                     <button className="rp-btn rp-btn--sm rp-btn--primary" onClick={() => navigate('/portal')}>
-                        Login / Register
+                        Portal Login
                     </button>
                 </div>
 
                 {/* Hamburger */}
-                <button className="rp-nav__burger" onClick={() => setMenu(m => !m)} aria-label="Toggle menu">
-                    <span className={menu ? 'open' : ''} />
-                    <span className={menu ? 'open' : ''} />
-                    <span className={menu ? 'open' : ''} />
+                <button className={`rp-nav__burger ${menu ? 'rp-nav__burger--active' : ''}`} onClick={() => setMenu(m => !m)} aria-label="Toggle menu">
+                    <span />
+                    <span />
+                    <span />
                 </button>
+            </div>
+
+            {/* Mobile Menu */}
+            <div className={`rp-nav__mobile ${menu ? 'rp-nav__mobile--open' : ''}`}>
+                <div className="rp-nav__mobile-inner">
+                    <button className="rp-nav__mobile-link" onClick={() => { navigate('/about'); setMenu(false); }}>About Us</button>
+                    <button className="rp-nav__mobile-link" onClick={() => scroll('services')}>Services</button>
+                    <button className="rp-nav__mobile-link" onClick={() => scroll('how')}>Process</button>
+                    <button className="rp-nav__mobile-link" onClick={() => { navigate('/contact'); setMenu(false); }}>Contact</button>
+                    <div style={{ padding: '20px 0' }}>
+                        <button className="rp-btn rp-btn--primary" style={{ width: '100%' }} onClick={() => navigate('/portal')}>
+                            Login / Register
+                        </button>
+                    </div>
+                </div>
             </div>
         </nav>
     );
@@ -281,12 +359,7 @@ function Hero() {
                     </button>
                 </div>
 
-                {/* Pill badges */}
-                <div className="rp-hero__pills">
-                    {['RBI Certified', 'NPCI Approved', 'ISO 27001', '100% Uptime'].map(p => (
-                        <span key={p} className="rp-pill">{p}</span>
-                    ))}
-                </div>
+
             </div>
 
             {/* Floating Cards */}
@@ -350,9 +423,9 @@ function Stats() {
     return (
         <section className="rp-stats">
             <StaggerGrid className="rp-stats__inner" step={130}>
-                {STATS.map(({ num, label }) => (
+                {STATS.map(({ num, label, prefix, suffix }) => (
                     <div key={label} className="rp-stat-card">
-                        <b className="rp-stat-num">{num}</b>
+                        <Counter end={num} prefix={prefix} suffix={suffix} />
                         <span className="rp-stat-label">{label}</span>
                     </div>
                 ))}
@@ -602,9 +675,18 @@ function Services() {
                                     }} />
                                     <span style={{
                                         position: 'relative', zIndex: 2,
+                                        width: s.img ? 160 : 'auto',
+                                        height: s.img ? 160 : 'auto',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         filter: 'drop-shadow(0 16px 40px rgba(0,0,0,0.5))',
                                         animation: isActive ? `emojiFloat${i % 3} 4s ease-in-out infinite` : 'none',
-                                    }}>{s.emoji}</span>
+                                    }}>
+                                        {s.img ? (
+                                            <img src={s.img} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        ) : (
+                                            s.emoji
+                                        )}
+                                    </span>
                                 </div>
                             </div>
                         );
@@ -619,34 +701,188 @@ function Services() {
    HOW IT WORKS
 ══════════════════════════════════════════════ */
 function HowItWorks() {
+    const sectionRef = useRef(null);
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (!sectionRef.current) return;
+            const rect = sectionRef.current.getBoundingClientRect();
+            const total = sectionRef.current.offsetHeight - window.innerHeight;
+            const val = Math.min(Math.max(-rect.top / total, 0), 1);
+            setProgress(val);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
-        <section className="rp-section rp-section--light" id="how">
-            <div className="section-container">
-                <SectionHead tag="Process" title="Start Earning in<br/><span class='rp-gradient-text'>3 Simple Steps</span>" sub="No complex setup. No hidden charges. Just plug in and profit." />
+        <section
+            ref={sectionRef}
+            id="how"
+            style={{
+                height: '400vh',
+                background: '#f8fafc',
+                position: 'relative'
+            }}
+        >
+            <div style={{
+                position: 'sticky',
+                top: 0,
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center', // Centered
+                justifyContent: 'center', // centered
+                overflow: 'hidden',
+                padding: '0 5%'
+            }}>
 
-                <div className="rp-how-flow-container">
-                    {/* The Connecting Path */}
-                    <div className="how-flow-line">
-                        <div className="flow-progress"></div>
-                    </div>
+                <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: 1300,
+                    height: 800,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'center'
+                }}>
+                    {/* Semicircle Dotted Line - REFINED & GLOWING */}
+                    <svg style={{
+                        position: 'absolute',
+                        left: -120,
+                        top: '-30%',
+                        width: 1000,
+                        height: '160%',
+                        zIndex: 1,
+                        pointerEvents: 'none',
+                    }} viewBox="0 0 500 1000">
+                        <defs>
+                            <filter id="lineGlow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        {/* Background Track */}
+                        <path
+                            d="M 0 0 Q 500 500 0 1000"
+                            fill="none"
+                            stroke="rgba(59, 130, 246, 0.08)"
+                            strokeWidth="3"
+                        />
+                        {/* Perfect Round Dots */}
+                        <path
+                            d="M 0 0 Q 500 500 0 1000"
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="6"
+                            strokeDasharray="0.1 28"
+                            strokeLinecap="round"
+                            filter="url(#lineGlow)"
+                            opacity="0.5"
+                        />
+                    </svg>
 
-                    <StaggerGrid className="rp-how-grid-v2" step={200}>
-                        {HOW.map(({ step, color, title, desc }, i) => (
-                            <div key={step} className="how-step-node">
-                                <div className="how-node-header">
-                                    <div className="how-node-circle" style={{ '--accent': color }}>
-                                        <span className="node-num">{step.replace('0', '')}</span>
-                                        <div className="node-glow" style={{ background: color }}></div>
-                                    </div>
+                    {HOW.map((item, i) => {
+                        const count = HOW.length;
+                        const rel = progress * (count - 0.2) - i;
+
+                        // Parameters for HERO size container
+                        const t = 0.5 + (rel * -0.15);
+
+                        const x_vb = 1000 * t * (1 - t);
+                        const y_vb = 1000 * t;
+
+                        // Mapping ViewBox to 1000px width / 1280px height
+                        const x_pix = -120 + (x_vb * 2.0);
+                        const y_pix = -240 + (y_vb * 1.28);
+
+                        // Circle radius is 60px. Container left is 5% (65px), top is 50% (400px).
+                        const translateX = x_pix - 65 - 60;
+                        const translateY = y_pix - 400 - 60;
+
+                        const scale = 1 - Math.abs(rel) * 0.35;
+                        const opacity = 1 - Math.abs(rel) * 0.85;
+                        const blur = Math.abs(rel) * 12;
+                        const isActive = Math.abs(rel) < 0.4;
+
+                        if (t < -0.15 || t > 1.15) return null;
+
+                        return (
+                            <div
+                                key={i}
+                                style={{
+                                    position: 'absolute',
+                                    width: 'auto',
+                                    left: '5%',
+                                    top: '50%',
+                                    opacity: Math.max(0, opacity),
+                                    transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`,
+                                    filter: `blur(${blur}px)`,
+                                    transition: 'transform 0.08s linear, opacity 0.3s ease, filter 0.3s ease',
+                                    zIndex: isActive ? 50 : 10 - Math.abs(Math.round(rel)),
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 50,
+                                    pointerEvents: isActive ? 'auto' : 'none'
+                                }}
+                            >
+                                <div className="how-node-circle" style={{
+                                    '--accent': item.color,
+                                    width: 120, height: 120, // MASSIVE
+                                    flexShrink: 0,
+                                    border: isActive ? `10px solid ${item.color}` : `5px solid #e2e8f0`,
+                                    background: isActive ? '#fff' : 'rgba(239, 246, 255, 0.6)',
+                                    boxShadow: isActive ? `0 45px 90px -20px ${item.color}60, 0 0 30px ${item.color}40` : 'none',
+                                    transform: isActive ? 'scale(1.2)' : 'scale(1)',
+                                    transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <span className="node-num" style={{
+                                        color: isActive ? item.color : '#3b82f6',
+                                        fontSize: isActive ? '3.8rem' : '2rem',
+                                        opacity: isActive ? 1 : 0.4,
+                                        fontWeight: 900,
+                                        transform: 'translateY(-6px)'
+                                    }}>
+                                        {item.step.replace('0', '')}
+                                    </span>
                                 </div>
-                                <div className="how-node-card">
-                                    <h3 className="how-node-title">{title}</h3>
-                                    <p className="how-node-desc">{desc}</p>
-                                    <div className="how-node-icon-bg">{i === 0 ? '📝' : i === 1 ? '🛡️' : '💰'}</div>
+
+                                <div className="how-node-card" style={{
+                                    width: 550, // MUCH LARGER
+                                    padding: '50px 60px',
+                                    textAlign: 'left',
+                                    background: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+                                    border: isActive ? `1px solid ${item.color}50` : '1px solid #e2e8f0',
+                                    boxShadow: isActive ? '0 50px 100px -25px rgba(0,0,0,0.18)' : 'none',
+                                    borderRadius: 50,
+                                    transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                    opacity: isActive ? 1 : 0.1,
+                                    backdropFilter: isActive ? 'none' : 'blur(8px)'
+                                }}>
+                                    <h3 className="how-node-title" style={{
+                                        fontSize: '2.2rem',
+                                        marginBottom: '15px',
+                                        color: isActive ? '#0f172a' : '#64748b',
+                                        fontWeight: 800
+                                    }}>{item.title}</h3>
+                                    <p className="how-node-desc" style={{
+                                        fontSize: '1.25rem',
+                                        lineHeight: '1.7',
+                                        color: isActive ? '#475569' : '#94a3b8',
+                                        fontWeight: 500
+                                    }}>{item.desc}</p>
                                 </div>
                             </div>
-                        ))}
-                    </StaggerGrid>
+                        );
+                    })}
                 </div>
             </div>
         </section>
@@ -1126,22 +1362,33 @@ const CSS = `
 .rp-pill { background: var(--white); border: 1px solid var(--border); color: var(--body); border-radius: 999px; font-size: 11px; font-weight: 700; padding: 6px 14px; white-space: nowrap; }
 
 /* ═══════════════════════════════════════════
-   NAVBAR
+   NAVBAR IMPROVED
 ═══════════════════════════════════════════ */
-.rp-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: 18px 0; transition: all 0.4s; }
-.rp-nav--scrolled { background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 2px 20px rgba(0,0,0,0.08); padding: 12px 0; }
-.rp-nav__inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.rp-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: 18px 0; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
+.rp-nav--scrolled { background: rgba(255,255,255,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 4px 30px rgba(0,0,0,0.05); padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.3); }
+.rp-nav__inner { max-width: 1200px; margin: 0 auto; padding: 0 5%; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 10; }
 .rp-nav__brand { cursor: pointer; display: flex; align-items: center; }
-.rp-nav__logo { height: 38px; object-fit: contain; }
-.rp-nav__links { display: flex; align-items: center; gap: 8px; }
-.rp-nav__link { background: none; border: none; font-family: inherit; font-size: 0.85rem; font-weight: 700; color: var(--body); cursor: pointer; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; letter-spacing: 0.2px; }
+.rp-nav__logo { height: 42px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05)); }
+.rp-nav__desktop { display: flex; align-items: center; gap: 12px; }
+.rp-nav__link { background: none; border: none; font-family: inherit; font-size: 0.9rem; font-weight: 700; color: #0f172a; cursor: pointer; padding: 10px 18px; border-radius: 12px; transition: all 0.2s; letter-spacing: 0.1px; }
 .rp-nav__link:hover { color: var(--blue); background: var(--blue-lt); }
-.rp-nav__burger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px; }
-.rp-nav__burger span { width: 24px; height: 2.5px; background: var(--dark); border-radius: 2px; transition: all 0.3s; display: block; }
+
+.rp-nav__burger { display: none; flex-direction: column; justify-content: center; align-items: center; width: 44px; height: 44px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.3s; position: relative; z-index: 1000; }
+.rp-nav__burger span { width: 22px; height: 2px; background: #0f172a; border-radius: 2px; transition: all 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6); position: absolute; }
+.rp-nav__burger span:nth-child(1) { transform: translateY(-7px); }
+.rp-nav__burger span:nth-child(3) { transform: translateY(7px); }
+.rp-nav__burger--active span:nth-child(1) { transform: rotate(45deg); }
+.rp-nav__burger--active span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+.rp-nav__burger--active span:nth-child(3) { transform: rotate(-45deg); }
+
+.rp-nav__mobile { position: fixed; inset: 0; background: #fff; z-index: 150; clip-path: circle(0% at 90% 5%); transition: clip-path 0.6s cubic-bezier(0.77, 0, 0.175, 1); visibility: hidden; }
+.rp-nav__mobile--open { clip-path: circle(150% at 90% 5%); visibility: visible; }
+.rp-nav__mobile-inner { height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 10%; gap: 10px; }
+.rp-nav__mobile-link { background: none; border: none; text-align: left; font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 900; color: #0f172a; padding: 15px 0; border-bottom: 2px solid #f1f5f9; cursor: pointer; }
+
 @media(max-width:900px){
-  .rp-nav__links { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.98); flex-direction:column; justify-content:center; align-items:center; gap:24px; z-index:300; }
-  .rp-nav__links--open { display:flex; }
-  .rp-nav__burger { display:flex; z-index:400; }
+  .rp-nav__desktop { display: none; }
+  .rp-nav__burger { display: flex; }
 }
 
 /* ═══════════════════════════════════════════
@@ -1270,59 +1517,59 @@ const CSS = `
 .rp-service-card:hover .rp-service-arrow { opacity: 1; transform: translateX(4px); }
 
 /* ═══════════════════════════════════════════
-   HOW IT WORKS V2
+   HOW IT WORKS V3 - PARABOLA
 ═══════════════════════════════════════════ */
-.rp-how-flow-container { position: relative; padding: 60px 0; max-width: 1100px; margin: 0 auto; }
+.rp-how-parabola-container { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
 
-.how-flow-line {
-  position: absolute; top: 110px; left: 10%; right: 10%; height: 2px;
-  background: #e2e8f0; z-index: 1; border-radius: 99px; overflow: hidden;
+.how-step-node-v3 {
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
 }
-.flow-progress {
-  width: 0%; height: 100%; 
-  background: linear-gradient(90deg, var(--blue), var(--green), var(--yellow));
-  animation: flowLineFill 4s ease-in-out infinite alternate;
+
+@media(max-width: 900px) {
+  .how-step-node-v3 {
+    flex-direction: column !important;
+    text-align: center;
+    gap: 20px !important;
+  }
 }
-@keyframes flowLineFill { from { width: 0%; } to { width: 100%; } }
 
-.rp-how-grid-v2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; position: relative; z-index: 2; }
-
-.how-step-node { display: flex; flex-direction: column; align-items: center; text-align: center; }
-
-.how-node-header { margin-bottom: 32px; }
 .how-node-circle {
   width: 100px; height: 100px; background: #fff; border: 4px solid #fff;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: all 0.4s;
+  z-index: 5;
 }
 .node-num { font-size: 2.2rem; font-weight: 950; color: var(--accent); position: relative; z-index: 5; }
 .node-glow {
   position: absolute; inset: -4px; border-radius: 50%; filter: blur(15px);
   opacity: 0.15; transition: opacity 0.4s;
 }
-.how-step-node:hover .how-node-circle { transform: scale(1.1); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15); }
-.how-step-node:hover .node-glow { opacity: 0.4; }
 
 .how-node-card {
-  background: #fff; padding: 40px 30px; border-radius: 32px;
-  border: 1px solid #f1f5f9; box-shadow: 0 10px 20px rgba(0,0,0,0.03);
-  position: relative; overflow: hidden; transition: all 0.4s; height: 100%;
+  background: #fff; padding: 30px 40px; border-radius: 32px;
+  border: 1px solid #f1f5f9; box-shadow: 0 15px 40px rgba(0,0,0,0.05);
+  position: relative; overflow: hidden; transition: all 0.4s;
 }
-.how-step-node:hover .how-node-card { transform: translateY(-8px); box-shadow: 0 30px 60px -15px rgba(0,0,0,0.1); border-color: #e2e8f0; }
+.how-step-node-v3:hover .how-node-card { transform: scale(1.02); box-shadow: 0 25px 60px rgba(0,0,0,0.1); border-color: var(--blue); }
 
 .how-node-title {
-  font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; position: relative; z-index: 5;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a, #3b82f6, #0f172a);
-  background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  animation: partnersDissolve 8s ease infinite;
+  font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a, #3b82f6), #0f172a;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.how-node-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.7; position: relative; z-index: 5; }
+.how-node-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
 
 .how-node-icon-bg {
   position: absolute; bottom: -10px; right: -5px; font-size: 5rem;
-  opacity: 0.04; transform: rotate(-15deg); transition: opacity 0.4s, transform 0.4s;
+  opacity: 0.04; transform: rotate(-15deg);
 }
-.how-step-node:hover .how-node-icon-bg { opacity: 0.1; transform: rotate(0deg) scale(1.1); }
+
+@media(max-width: 900px) {
+  .how-connector-svg { display: none; }
+}
 
 @media(max-width:900px){
   .how-flow-line { display: none; }

@@ -27,14 +27,14 @@ const Reports = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const fetchTxns = () => {
+        const fetchTxns = async () => {
             setLoading(true);
             const user = dataService.getCurrentUser();
             if (user) {
-                const txns = dataService.getUserTransactions(user.username);
+                const txns = await dataService.getUserTransactions(user.id);
                 setTransactions(txns);
             }
-            setTimeout(() => setLoading(false), 500);
+            setLoading(false);
         };
         fetchTxns();
     }, []);
