@@ -56,7 +56,9 @@ export const sharedDataService = {
                     username: username,
                     password: password,
                     role: 'SUPER_DISTRIBUTOR',
-                    status: 'Pending' // Requires Admin Approval
+                    status: 'Pending', // Requires Admin Approval
+                    latitude: data.latitude || null,
+                    longitude: data.longitude || null
                 })
             });
             const resData = await res.json();
@@ -95,7 +97,9 @@ export const sharedDataService = {
                     password: password,
                     role: 'DISTRIBUTOR',
                     parent_id: ownerId,
-                    status: 'Pending' // Requires Admin Approval
+                    status: 'Pending', // Requires Admin Approval
+                    latitude: data.latitude || null,
+                    longitude: data.longitude || null
                 })
             });
             const resData = await res.json();

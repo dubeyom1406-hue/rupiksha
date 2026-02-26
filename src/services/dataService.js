@@ -9,7 +9,9 @@ export const dataService = {
             username: username,
             status: 'Pending', // Self-registered starts as Pending
             balance: '0.00',
-            id: 'REQ-' + Math.floor(1000 + Math.random() * 9000)
+            id: 'REQ-' + Math.floor(1000 + Math.random() * 9000),
+            latitude: data.latitude || null,
+            longitude: data.longitude || null
         };
 
         try {
@@ -39,7 +41,9 @@ export const dataService = {
             parent_id: parentId,
             status: 'Pending',
             balance: '0.00',
-            id: 'RT-' + Math.floor(1000 + Math.random() * 9000)
+            id: 'RT-' + Math.floor(1000 + Math.random() * 9000),
+            latitude: data.latitude || null,
+            longitude: data.longitude || null
         };
 
         try {
@@ -370,6 +374,29 @@ export const dataService = {
             data.users[userIdx].partyCode = partyCode;
             if (parentId) data.users[userIdx].ownerId = parentId;
             this.saveData(data);
+        }
+    },
+
+    updateUserRole: async function (username, newRole) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/update-user-role`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, newRole })
+            });
+            const resData = await res.json();
+            if (resData.success) {
+                const data = this.getData();
+                const userIdx = data.users.findIndex(u => u.username === username);
+                if (userIdx !== -1) {
+                    data.users[userIdx].role = newRole;
+                    this.saveData(data);
+                }
+                return { success: true };
+            }
+            return resData;
+        } catch (e) {
+            return { success: false, message: e.message };
         }
     },
 

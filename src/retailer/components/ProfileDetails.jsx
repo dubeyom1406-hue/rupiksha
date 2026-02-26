@@ -6,7 +6,7 @@ import {
     ChevronDown, ArrowRight, RefreshCw, X, Calendar, ShieldCheck, Edit3, Plus, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { dataService, BACKEND_URL as IMPORTED_BACKEND_URL } from '../../../services/dataService';
+import { dataService, BACKEND_URL as IMPORTED_BACKEND_URL } from '../../services/dataService';
 
 // Fallback if import system has issues with named exports in some environments
 const BACKEND_URL = IMPORTED_BACKEND_URL || `/api`;

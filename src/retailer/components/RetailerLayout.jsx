@@ -87,6 +87,8 @@ const RetailerLayout = () => {
                         if (type === 'logout') {
                             dataService.logoutUser();
                             navigate('/');
+                        } else {
+                            navigate(`/profile?tab=${type}`);
                         }
                     }}
                     onMenuClick={() => setShowMobileSidebar(!showMobileSidebar)}

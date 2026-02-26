@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './Login';
 import Dashboard from './retailer/pages/Dashboard';
+import Profile from './retailer/pages/Profile';
 import RetailerLayout from './retailer/components/RetailerLayout';
 import Travel from './retailer/pages/Travel';
 import Utility from './retailer/pages/Utility';
@@ -18,6 +19,7 @@ import About from './About';
 import Contact from './Contact';
 import Leadership from './Leadership';
 import RetailerDetails from './components/admin/RetailerDetails';
+import DistributorDetails from './components/admin/DistributorDetails';
 import './App.css';
 
 import { LanguageProvider } from './context/LanguageContext';
@@ -115,6 +117,7 @@ function App() {
           {/* ── Retailer Panel (A Panel) ── */}
           <Route element={<RetailerLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/utility" element={<Utility />} />
             <Route path="/aeps" element={<AEPS />} />
             <Route path="/cms" element={<CMS />} />
@@ -128,6 +131,7 @@ function App() {
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/retailer/:username" element={<RetailerDetails />} />
+          <Route path="/admin/distributor/:id" element={<DistributorDetails />} />
 
           {/* ── Distributor Plan Selection ── */}
           <Route path="/distributor-plans" element={<DistributorPlans />} />

@@ -64,35 +64,46 @@ const RetailerLogin = () => {
                 } else {
                     setLoginError(data.message || 'OTP request failed');
                 }
-            } else if (mode === 'otp') {
-                // Verify OTP
-                const res = await fetch(`${BACKEND_URL}/verify-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mobile: tempUser.mobile, otp: enteredOtp })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
-                    navigate('/retailer');
-                } else {
-                    setLoginError(data.message || 'Invalid OTP');
-                }
             } else {
-                // Password Login
-                const res = await fetch(`${BACKEND_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...loginForm, role: 'RETAILER' })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
-                    navigate('/retailer');
+                // Capture Location for Login/Verify
+                let loginLocation = null;
+                try {
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+                    });
+                    loginLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                } catch (e) { }
+
+                if (mode === 'otp') {
+                    // Verify OTP Flow
+                    const res = await fetch(`${BACKEND_URL}/verify-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mobile: tempUser.mobile, otp: enteredOtp, location: loginLocation })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.token);
+                        navigate('/retailer');
+                    } else {
+                        setLoginError(data.message || 'Invalid OTP');
+                    }
                 } else {
-                    setLoginError(data.message || 'Login failed');
+                    // Standard Password Login
+                    const res = await fetch(`${BACKEND_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...loginForm, role: 'RETAILER', location: loginLocation })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.token);
+                        navigate('/retailer');
+                    } else {
+                        setLoginError(data.message || 'Login failed');
+                    }
                 }
             }
         } catch (err) {
@@ -110,8 +121,20 @@ const RetailerLogin = () => {
             return;
         }
         setIsLoading(true);
+
+        // Attempt to capture location
+        let coords = { latitude: null, longitude: null };
         try {
-            const data = await dataService.requestRegistration(registerForm);
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        } catch (err) {
+            console.warn("Location access denied or timed out");
+        }
+
+        try {
+            const data = await dataService.requestRegistration({ ...registerForm, ...coords });
             if (data.success) {
                 setTempUser({ ...registerForm, id: data.registrationId });
                 setMode('success');

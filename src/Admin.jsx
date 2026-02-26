@@ -6,7 +6,7 @@ import {
     ArrowLeft, CheckCircle2, AlertTriangle, Plus, Trash2, Edit3, FileText,
     BarChart3, Megaphone, Zap, Upload, X, ImageIcon, Play,
     Camera, Eye, IndianRupee, ChevronRight, Wallet, TrendingUp, History, ArrowRight,
-    Building2, UserPlus, UserMinus, ShieldCheck, Link2, Copy, Crown, ChevronDown, Mail
+    Building2, UserPlus, UserMinus, ShieldCheck, Link2, Copy, Crown, ChevronDown, Mail, MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dataService } from './services/dataService';
@@ -14,6 +14,7 @@ import { sharedDataService } from './services/sharedDataService';
 import { sendApprovalEmail } from './services/emailService';
 import mainLogo from './assets/rupiksha_logo.png';
 import AdminPlanManager from './AdminPlanManager';
+import OurMap from './superadmin/pages/OurMap';
 
 const Admin = () => {
     const navigate = useNavigate();
@@ -65,6 +66,32 @@ const Admin = () => {
 
     const [showSuccessView, setShowSuccessView] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
+
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [userForRoleChange, setUserForRoleChange] = useState(null);
+    const [targetRole, setTargetRole] = useState('');
+
+    const handleRoleChangeClick = (user) => {
+        setUserForRoleChange(user);
+        setTargetRole(user.role);
+        setShowRoleModal(true);
+    };
+
+    const submitRoleChange = async () => {
+        if (!targetRole) return;
+        try {
+            const res = await dataService.updateUserRole(userForRoleChange.username, targetRole);
+            if (res.success) {
+                setStatus({ type: 'success', message: `Role updated for ${userForRoleChange.username}` });
+                refreshData();
+                setShowRoleModal(false);
+            } else {
+                alert(res.message || 'Failed to update role');
+            }
+        } catch (e) {
+            alert('Error updating role');
+        }
+    };
 
     const handleInviteSA = async (e) => {
         e.preventDefault();
@@ -178,6 +205,10 @@ const Admin = () => {
             setData({ ...currentData, users: retailers });
             setDistributors(dists);
             setSuperadmins(sas);
+
+            // Sync with sharedDataService for other components
+            sharedDataService.saveDistributors(dists);
+            sharedDataService.saveSuperAdmins(sas);
 
             const trash = await dataService.getTrashUsers();
             setTrashUsers(trash);
@@ -1083,12 +1114,19 @@ const Admin = () => {
                                             <Mail size={16} />
                                         </button>
                                         <button
-                                            onClick={() => handleLoginAsRetailer(user.username)}
+                                            onClick={() => handleLoginAsRetailer(user)}
                                             className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1 px-3"
                                             title="Login as Retailer"
                                         >
                                             <ArrowRight size={14} />
                                             <span className="text-[10px] font-black uppercase">Login</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleRoleChangeClick(user)}
+                                            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                                            title="Change User Role"
+                                        >
+                                            <TrendingUp size={16} />
                                         </button>
                                         <button
                                             onClick={() => navigate(`/admin/retailer/${user.username}`)}
@@ -1112,6 +1150,55 @@ const Admin = () => {
                 </table>
             </div >
         </div >
+    );
+
+    const ChangeRoleModal = () => (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm border border-slate-200"
+            >
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <TrendingUp size={20} className="text-indigo-500" /> Change User Role
+                    </h3>
+                    <button onClick={() => setShowRoleModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                </div>
+
+                <div className="space-y-6">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target User</p>
+                        <p className="text-sm font-black text-slate-800">{userForRoleChange?.name || userForRoleChange?.username}</p>
+                        <p className="text-[10px] text-slate-500">Current Role: {userForRoleChange?.role}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select New Role</p>
+                        <div className="grid grid-cols-1 gap-2">
+                            {['RETAILER', 'DISTRIBUTOR', 'SUPER_DISTRIBUTOR'].map(role => (
+                                <button
+                                    key={role}
+                                    onClick={() => setTargetRole(role)}
+                                    className={`w-full p-4 rounded-xl text-left border-2 transition-all flex items-center justify-between
+                                        ${targetRole === role
+                                            ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700'
+                                            : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
+                                >
+                                    <span className="text-xs font-black uppercase tracking-wider">{role.replace('_', ' ')}</span>
+                                    {targetRole === role && <CheckCircle2 size={16} />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={submitRoleChange}
+                        className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                    >
+                        Confirm Rank Shift
+                    </button>
+                </div>
+            </motion.div>
+        </div>
     );
 
     const TrashTable = () => (
@@ -1819,6 +1906,21 @@ const Admin = () => {
                                                     <span className="text-[9px] font-black uppercase">Login</span>
                                                 </button>
                                                 <button
+                                                    onClick={() => handleRoleChangeClick(d)}
+                                                    className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1 px-2"
+                                                    title="Change User Role"
+                                                >
+                                                    <TrendingUp size={14} />
+                                                    <span className="text-[9px] font-black uppercase">Role</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/admin/distributor/${d.id}`)}
+                                                    className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                                    title="View Distributor Profile"
+                                                >
+                                                    <Eye size={14} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleReject(d.username)}
                                                     className="p-1.5 bg-red-50 text-red-400 rounded-lg hover:bg-red-100"
                                                 ><Trash2 size={14} /></button>
@@ -1862,6 +1964,7 @@ const Admin = () => {
             {showApprovalModal && <ApprovalModal />}
             {showDistApprovalModal && <DistApprovalModal />}
             {showSAApprovalModal && <SAApprovalModal />}
+            {showRoleModal && <ChangeRoleModal />}
             {showAddSAModal && <AddSuperAdminModal />}
             {showAssignModal && assignTargetDist && <AssignRetailersModal />}
             {showCredentialCard && <CredentialSharerModal />}
@@ -1895,15 +1998,16 @@ const Admin = () => {
                         { id: 'Services', icon: Package },
                         { id: 'Promotions', icon: Video },
                         { id: 'Stats', icon: BarChart3 },
-                        { id: 'Logins', icon: RefreshCcw },
-                        { id: 'Settings', icon: Settings },
+                        { id: 'Logins', icon: RefreshCcw, label: 'Logins' },
+                        { id: 'OurMap', icon: MapPin, label: 'Our Map' },
+                        { id: 'Settings', icon: Settings, label: 'Settings' },
                     ].map(item => (
                         <button key={item.id}
                             onClick={() => { setActiveSection(item.id); setExpandedNav(null); setShowMobileSidebar(false); }}
                             className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3
                                 ${activeSection === item.id ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/5 text-slate-400'}`}>
                             <item.icon size={17} />
-                            <span className="text-sm font-bold uppercase tracking-wider">{item.id}</span>
+                            <span className="text-sm font-bold uppercase tracking-wider">{item.label || item.id}</span>
                         </button>
                     ))}
 
@@ -2037,6 +2141,7 @@ const Admin = () => {
                     {activeSection === 'Logins' && <LoginsTable />}
                     {activeSection === 'Retailers' && <RetailersTable />}
                     {activeSection === 'Distributors' && <DistributorsTable />}
+                    {activeSection === 'OurMap' && <OurMap />}
 
                     {/* ── Plans sections ── */}
                     {activeSection === 'Plans' && <AdminPlanManager defaultType="retailer" />}
@@ -2167,6 +2272,13 @@ const Admin = () => {
                                                                     className="px-5 py-2.5 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                                                                 >
                                                                     <Eye size={14} /> Full Access
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRoleChangeClick(sa)}
+                                                                    className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100"
+                                                                    title="Change Role"
+                                                                >
+                                                                    <TrendingUp size={16} />
                                                                 </button>
                                                                 <button onClick={() => handleReject(sa.username)} className="p-2.5 bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
                                                                     <Trash2 size={16} />

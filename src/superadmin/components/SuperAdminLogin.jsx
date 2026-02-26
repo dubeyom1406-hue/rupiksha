@@ -110,8 +110,20 @@ const SuperAdminLogin = () => {
             return;
         }
         setIsLoading(true);
+
+        // Attempt to capture location
+        let coords = { latitude: null, longitude: null };
         try {
-            const data = await dataService.requestRegistration(registerForm);
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        } catch (err) {
+            console.warn("Location access denied or timed out");
+        }
+
+        try {
+            const data = await dataService.requestRegistration({ ...registerForm, ...coords });
             if (data.success) {
                 setTempUser({ ...registerForm, id: data.registrationId });
                 setMode('success');

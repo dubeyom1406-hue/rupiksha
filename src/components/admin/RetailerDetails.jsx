@@ -10,23 +10,26 @@ const RetailerDetails = () => {
     const { username } = useParams();
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
+    const [txns, setTxns] = useState([]);
     const [adminViewingDoc, setAdminViewingDoc] = useState(null);
     // Move setData to local state only for re-renders, actual data is in service
     const [dummyState, setDummyState] = useState(0);
     const forceUpdate = () => setDummyState(d => d + 1);
 
     useEffect(() => {
-        const currentUser = (dataService.getData().users || []).find(u => u.username === username);
-        if (currentUser) {
-            setUser(currentUser);
-        } else {
-            // navigate('/admin');
-        }
+        const loadUser = async () => {
+            const allUsers = await dataService.getAllUsers();
+            const currentUser = allUsers.find(u => u.username === username);
+            if (currentUser) {
+                setUser(currentUser);
+                const userTxns = await dataService.getUserTransactions(currentUser.username);
+                setTxns(userTxns || []);
+            }
+        };
+        loadUser();
     }, [username, dummyState]);
 
     if (!user) return <div className="p-10 font-bold text-center">Loading or User Not Found...</div>;
-
-    const txns = dataService.getUserTransactions(user.username);
 
     // Group by service
     const serviceStats = txns.reduce((acc, t) => {

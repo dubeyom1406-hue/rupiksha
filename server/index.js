@@ -347,7 +347,8 @@ app.post('/api/register', async (req, res) => {
     const {
         username, password, name, role, parent_id,
         business_name, businessName, // Handle both
-        email, mobile, city, state, address, pincode, status
+        email, mobile, city, state, address, pincode, status,
+        latitude, longitude
     } = req.body;
 
     // Robust fallbacks for self-registration
@@ -358,12 +359,28 @@ app.post('/api/register', async (req, res) => {
     const finalStatus = status || 'Pending';
 
     try {
-        const sql = 'INSERT INTO users (username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const vals = [finalUsername, finalPassword, name, finalRole, parent_id || null, finalBusinessName, email, mobile, city || '', state, address || '', pincode || '', finalStatus];
+        // 1. Check if user already exists
+        const [existing] = await pool.query(
+            'SELECT id FROM users WHERE username = ? OR mobile = ?',
+            [finalUsername, mobile]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "User already exists with this mobile number or username."
+            });
+        }
+
+        const sql = 'INSERT INTO users (username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const vals = [
+            finalUsername, finalPassword, name, finalRole, parent_id || null,
+            finalBusinessName, email, mobile, city || '', state,
+            address || '', pincode || '', finalStatus,
+            latitude || null, longitude || null
+        ];
 
         console.log("📝 EXECUTING REGISTRATION QUERY...");
-        // console.log(sql, vals);
-
         const [result] = await pool.query(sql, vals);
         const userId = result.insertId;
         // Create wallet for new user
@@ -383,6 +400,19 @@ app.post('/api/approve-user', async (req, res) => {
             [status || 'Approved', password, partyCode || null, parent_id || null, username]
         );
         res.json({ success: true, message: "User status updated" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/update-user-role', async (req, res) => {
+    const { username, newRole } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET role = ? WHERE username = ?',
+            [newRole, username]
+        );
+        res.json({ success: true, message: `User ${username} updated to ${newRole}` });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
