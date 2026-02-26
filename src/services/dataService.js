@@ -2,6 +2,69 @@ export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || `http://localhost
 
 export const dataService = {
     // --- AUTH & LOGIN ---
+    requestRegistration: async function (data) {
+        const username = data.mobile || data.email;
+        const newUser = {
+            ...data,
+            username: username,
+            status: 'Pending', // Self-registered starts as Pending
+            balance: '0.00',
+            id: 'REQ-' + Math.floor(1000 + Math.random() * 9000)
+        };
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser)
+            });
+            const resData = await res.json();
+            return resData;
+        } catch (e) {
+            // Local fallback
+            const localData = this.getData();
+            if (!localData.users.find(u => u.username === username)) {
+                localData.users.push(newUser);
+                this.saveData(localData);
+            }
+            return { success: true, message: "Request saved offline", registrationId: newUser.id };
+        }
+    },
+    registerUser: async function (data, parentId = null) {
+        const username = data.mobile || data.email;
+        const newUser = {
+            ...data,
+            username: username,
+            role: data.role || 'RETAILER',
+            parent_id: parentId,
+            status: 'Pending',
+            balance: '0.00',
+            id: 'RT-' + Math.floor(1000 + Math.random() * 9000)
+        };
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser)
+            });
+            const resData = await res.json();
+            if (resData.success) {
+                // Success from server
+            }
+        } catch (e) {
+            console.warn("Server unreachable, saving locally only.");
+        }
+
+        // Always save locally as fallback/sync
+        const localData = this.getData();
+        if (!localData.users.find(u => u.username === username)) {
+            localData.users.push(newUser);
+            this.saveData(localData);
+        }
+        return { success: true, user: newUser };
+    },
+
     loginUser: async function (username, password, location = null) {
         try {
             const res = await fetch(`${BACKEND_URL}/login`, {
@@ -14,10 +77,16 @@ export const dataService = {
                 localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
                 return { success: true, user: data.user };
             }
-            return { success: false, message: data.message };
-        } catch (e) {
-            return { success: false, message: "Server connection failed" };
+        } catch (e) { }
+
+        // Local fallback for testing
+        const data = this.getData();
+        const user = data.users.find(u => (u.username === username || u.mobile === username) && u.password === password);
+        if (user) {
+            localStorage.setItem('rupiksha_user', JSON.stringify(user));
+            return { success: true, user };
         }
+        return { success: false, message: "Invalid credentials or Server down" };
     },
 
     getCurrentUser: function () {
@@ -143,11 +212,21 @@ export const dataService = {
 
     // --- ADMIN OVERSIGHT ---
     getAllUsers: async function () {
+        let users = [];
         try {
             const res = await fetch(`${BACKEND_URL}/all-users`);
             const data = await res.json();
-            return data.success ? data.users : [];
-        } catch (e) { return []; }
+            if (data.success) users = data.users;
+        } catch (e) { }
+
+        // Merge with local storage
+        const local = this.getData();
+        local.users.forEach(u => {
+            if (!users.find(bu => bu.username === u.username)) {
+                users.push(u);
+            }
+        });
+        return users;
     },
 
     getAllTransactions: async function () {
@@ -158,10 +237,104 @@ export const dataService = {
         } catch (e) { return []; }
     },
 
+    getTrashUsers: async function () {
+        try {
+            const res = await fetch(`${BACKEND_URL}/trash-users`);
+            const data = await res.json();
+            return data.success ? data.users : [];
+        } catch (e) { return []; }
+    },
+
+    deleteUser: async function (username) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/delete-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            return await res.json();
+        } catch (e) { return { success: false }; }
+    },
+
+    restoreUser: async function (username) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/restore-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            return await res.json();
+        } catch (e) { return { success: false }; }
+    },
+
+    resendCredentials: async function (user) {
+        try {
+            const res = await fetch(`${BACKEND_URL}/send-credentials`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: user.email,
+                    name: user.name,
+                    login_id: user.username || user.mobile,
+                    password: user.password,
+                    added_by: 'Administrator',
+                    portal_type: user.role
+                })
+            });
+            return await res.json();
+        } catch (e) { return { success: false }; }
+    },
+
     getData: function () {
         const d = localStorage.getItem('rupiksha_data');
-        const data = d ? JSON.parse(d) : { users: [], transactions: [] };
-        // Merge in currentUser for legacy support
+        let data = d ? JSON.parse(d) : null;
+
+        if (!data) {
+            data = {
+                users: [],
+                transactions: [],
+                news: "Welcome to Rupiksha Fintech Admin Panel!",
+                chartTitle: "Weekly Volume Activity",
+                chartData: [
+                    { name: 'Mon', value: 400 }, { name: 'Tue', value: 300 },
+                    { name: 'Wed', value: 600 }, { name: 'Thu', value: 800 },
+                    { name: 'Fri', value: 500 }, { name: 'Sat', value: 900 },
+                    { name: 'Sun', value: 700 }
+                ],
+                quickActions: [
+                    { title: "Wallet Topup", subTitle: "Add funds to wallet", icon: "Wallet" },
+                    { title: "Manage Store", subTitle: "Edit store profile", icon: "Building2" }
+                ],
+                stats: {
+                    todayActive: "1,240",
+                    weeklyActive: "8,500",
+                    monthlyActive: "32,000",
+                    debitSale: "₹ 45.8 Cr",
+                    labels: {
+                        today: { title: "TODAY ACTIVE" },
+                        weekly: { title: "WEEKLY ACTIVE" },
+                        monthly: { title: "MONTHLY ACTIVE" },
+                        debit: { title: "TOTAL DEBIT" }
+                    }
+                },
+                wallet: { balance: "24,500.00", retailerName: "Premium Retailer" },
+                services: [
+                    {
+                        category: 'Banking & Finance',
+                        items: [
+                            { label: 'AEPS Withdrawal', icon: 'zap', active: true },
+                            { label: 'Money Transfer', icon: 'send', active: true }
+                        ]
+                    }
+                ]
+            };
+        }
+
+        // Ensure sub-properties exist to prevent crashes
+        if (!data.stats) data.stats = { todayActive: "0", weeklyActive: "0", monthlyActive: "0", debitSale: "₹ 0", labels: { today: { title: "TODAY ACTIVE" }, weekly: { title: "WEEKLY ACTIVE" }, monthly: { title: "MONTHLY ACTIVE" }, debit: { title: "TOTAL DEBIT" } } };
+        if (!data.users) data.users = [];
+        if (!data.wallet) data.wallet = { balance: "0.00", retailerName: "Retailer" };
+
         const user = localStorage.getItem('rupiksha_user');
         if (user) data.currentUser = JSON.parse(user);
         return data;

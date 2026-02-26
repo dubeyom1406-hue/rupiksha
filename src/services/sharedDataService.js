@@ -56,7 +56,7 @@ export const sharedDataService = {
                     username: username,
                     password: password,
                     role: 'SUPER_DISTRIBUTOR',
-                    status: 'Approved'
+                    status: 'Pending' // Requires Admin Approval
                 })
             });
             const resData = await res.json();
@@ -70,7 +70,7 @@ export const sharedDataService = {
                 balance: '0.00',
                 wallet: { balance: '0.00' },
                 assignedDistributors: [],
-                status: 'Approved'
+                status: 'Pending' // Sync local testing arrays
             };
             sas.push(newSA);
             this.saveSuperAdmins(sas);
@@ -95,7 +95,7 @@ export const sharedDataService = {
                     password: password,
                     role: 'DISTRIBUTOR',
                     parent_id: ownerId,
-                    status: 'Approved'
+                    status: 'Pending' // Requires Admin Approval
                 })
             });
             const resData = await res.json();
@@ -110,7 +110,7 @@ export const sharedDataService = {
                 wallet: { balance: '0.00' },
                 assignedRetailers: [],
                 ownerId: ownerId,
-                status: 'Approved'
+                status: 'Pending' // Sync local testing arrays
             };
             dists.push(newDist);
             this.saveDistributors(dists);

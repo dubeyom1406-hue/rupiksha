@@ -12,6 +12,8 @@ const pool = mysql.createPool({
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASS || 'Plmnkopo@09',
     database: process.env.DB_NAME || 'rupiksha',
+    port: process.env.DB_PORT || 3306,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -342,16 +344,22 @@ app.post('/api/verify-account', (req, res) => {
 // --- USER & AUTH ---
 
 app.post('/api/register', async (req, res) => {
-    const { username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status } = req.body;
+    const {
+        username, password, name, role, parent_id,
+        business_name, businessName, // Handle both
+        email, mobile, city, state, address, pincode, status
+    } = req.body;
 
     // Robust fallbacks for self-registration
     const finalUsername = username || mobile || `user_${Date.now()}`;
-    const finalPassword = password || '123456'; // Default temporary password
+    const finalPassword = password || '123456';
     const finalRole = role || 'RETAILER';
+    const finalBusinessName = business_name || businessName || '';
+    const finalStatus = status || 'Pending';
 
     try {
         const sql = 'INSERT INTO users (username, password, name, role, parent_id, business_name, email, mobile, city, state, address, pincode, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        const vals = [finalUsername, finalPassword, name, finalRole, parent_id || null, business_name || '', email, mobile, city || '', state, address || '', pincode || '', status || 'Pending'];
+        const vals = [finalUsername, finalPassword, name, finalRole, parent_id || null, finalBusinessName, email, mobile, city || '', state, address || '', pincode || '', finalStatus];
 
         console.log("📝 EXECUTING REGISTRATION QUERY...");
         // console.log(sql, vals);
@@ -398,7 +406,7 @@ app.post('/api/login', async (req, res) => {
     try {
         // Search by username or mobile
         const [users] = await pool.query(
-            'SELECT * FROM users WHERE (username = ? OR mobile = ?) AND password = ?',
+            'SELECT * FROM users WHERE (username = ? OR mobile = ?) AND password = ? AND is_deleted = FALSE',
             [username, username, password]
         );
 
@@ -852,8 +860,43 @@ app.get('/api/all-users', async (req, res) => {
             SELECT u.*, w.balance 
             FROM users u 
             LEFT JOIN wallets w ON u.id = w.user_id
+            WHERE u.is_deleted = FALSE
         `);
         res.json({ success: true, users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/trash-users', async (req, res) => {
+    try {
+        const [users] = await pool.query(`
+            SELECT u.*, w.balance 
+            FROM users u 
+            LEFT JOIN wallets w ON u.id = w.user_id
+            WHERE u.is_deleted = TRUE
+        `);
+        res.json({ success: true, users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/delete-user', async (req, res) => {
+    const { username } = req.body;
+    try {
+        await pool.query('UPDATE users SET is_deleted = TRUE WHERE username = ?', [username]);
+        res.json({ success: true, message: "User moved to trash" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/restore-user', async (req, res) => {
+    const { username } = req.body;
+    try {
+        await pool.query('UPDATE users SET is_deleted = FALSE WHERE username = ?', [username]);
+        res.json({ success: true, message: "User restored successfully" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

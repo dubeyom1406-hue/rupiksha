@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from './assets/rupiksha_logo.png';
+import Footer from './components/Footer';
+import VerticalCardSlider from './components/VerticalCardSlider';
 const aadhaar_3d_logo = "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Aadhaar_Logo.svg/1200px-Aadhaar_Logo.svg.png";
 
 /* ─────────────────────────────────────────────
@@ -195,7 +197,7 @@ const STATS = [
 ];
 
 const HOW = [
-    { step: '01', color: '#2563eb', title: 'Register Free', desc: 'Sign up in under 2 minutes with your mobile number. No paperwork needed.' },
+    { step: '01', color: '#2563eb', title: 'Register Now', desc: 'Sign up in under 2 minutes with your mobile number. No paperwork needed.' },
     { step: '02', color: '#16a34a', title: 'Get Approved', desc: 'Our team verifies your account and activates all financial services.' },
     { step: '03', color: '#ca8a04', title: 'Start Earning', desc: 'Offer digital payments to customers and earn commissions every day.' },
 ];
@@ -294,6 +296,7 @@ function Navbar() {
                 {/* Desktop Links */}
                 <div className="rp-nav__desktop">
                     <button className="rp-nav__link" onClick={() => navigate('/about')}>About Us</button>
+                    <button className="rp-nav__link" onClick={() => navigate('/leadership')}>Our Leadership</button>
                     <button className="rp-nav__link" onClick={() => scroll('services')}>Services</button>
                     <button className="rp-nav__link" onClick={() => scroll('how')}>Process</button>
                     <button className="rp-nav__link" onClick={() => navigate('/contact')}>Contact</button>
@@ -314,6 +317,7 @@ function Navbar() {
             <div className={`rp-nav__mobile ${menu ? 'rp-nav__mobile--open' : ''}`}>
                 <div className="rp-nav__mobile-inner">
                     <button className="rp-nav__mobile-link" onClick={() => { navigate('/about'); setMenu(false); }}>About Us</button>
+                    <button className="rp-nav__mobile-link" onClick={() => { navigate('/leadership'); setMenu(false); }}>Leadership</button>
                     <button className="rp-nav__mobile-link" onClick={() => scroll('services')}>Services</button>
                     <button className="rp-nav__mobile-link" onClick={() => scroll('how')}>Process</button>
                     <button className="rp-nav__mobile-link" onClick={() => { navigate('/contact'); setMenu(false); }}>Contact</button>
@@ -697,197 +701,7 @@ function Services() {
     );
 }
 
-/* ══════════════════════════════════════════════
-   HOW IT WORKS
-══════════════════════════════════════════════ */
-function HowItWorks() {
-    const sectionRef = useRef(null);
-    const [progress, setProgress] = useState(0);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            if (!sectionRef.current) return;
-            const rect = sectionRef.current.getBoundingClientRect();
-            const total = sectionRef.current.offsetHeight - window.innerHeight;
-            const val = Math.min(Math.max(-rect.top / total, 0), 1);
-            setProgress(val);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    return (
-        <section
-            ref={sectionRef}
-            id="how"
-            style={{
-                height: '400vh',
-                background: '#f8fafc',
-                position: 'relative'
-            }}
-        >
-            <div style={{
-                position: 'sticky',
-                top: 0,
-                height: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center', // Centered
-                justifyContent: 'center', // centered
-                overflow: 'hidden',
-                padding: '0 5%'
-            }}>
-
-                <div style={{
-                    position: 'relative',
-                    width: '100%',
-                    maxWidth: 1300,
-                    height: 800,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center'
-                }}>
-                    {/* Semicircle Dotted Line - REFINED & GLOWING */}
-                    <svg style={{
-                        position: 'absolute',
-                        left: -120,
-                        top: '-30%',
-                        width: 1000,
-                        height: '160%',
-                        zIndex: 1,
-                        pointerEvents: 'none',
-                    }} viewBox="0 0 500 1000">
-                        <defs>
-                            <filter id="lineGlow">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        {/* Background Track */}
-                        <path
-                            d="M 0 0 Q 500 500 0 1000"
-                            fill="none"
-                            stroke="rgba(59, 130, 246, 0.08)"
-                            strokeWidth="3"
-                        />
-                        {/* Perfect Round Dots */}
-                        <path
-                            d="M 0 0 Q 500 500 0 1000"
-                            fill="none"
-                            stroke="#3b82f6"
-                            strokeWidth="6"
-                            strokeDasharray="0.1 28"
-                            strokeLinecap="round"
-                            filter="url(#lineGlow)"
-                            opacity="0.5"
-                        />
-                    </svg>
-
-                    {HOW.map((item, i) => {
-                        const count = HOW.length;
-                        const rel = progress * (count - 0.2) - i;
-
-                        // Parameters for HERO size container
-                        const t = 0.5 + (rel * -0.15);
-
-                        const x_vb = 1000 * t * (1 - t);
-                        const y_vb = 1000 * t;
-
-                        // Mapping ViewBox to 1000px width / 1280px height
-                        const x_pix = -120 + (x_vb * 2.0);
-                        const y_pix = -240 + (y_vb * 1.28);
-
-                        // Circle radius is 60px. Container left is 5% (65px), top is 50% (400px).
-                        const translateX = x_pix - 65 - 60;
-                        const translateY = y_pix - 400 - 60;
-
-                        const scale = 1 - Math.abs(rel) * 0.35;
-                        const opacity = 1 - Math.abs(rel) * 0.85;
-                        const blur = Math.abs(rel) * 12;
-                        const isActive = Math.abs(rel) < 0.4;
-
-                        if (t < -0.15 || t > 1.15) return null;
-
-                        return (
-                            <div
-                                key={i}
-                                style={{
-                                    position: 'absolute',
-                                    width: 'auto',
-                                    left: '5%',
-                                    top: '50%',
-                                    opacity: Math.max(0, opacity),
-                                    transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`,
-                                    filter: `blur(${blur}px)`,
-                                    transition: 'transform 0.08s linear, opacity 0.3s ease, filter 0.3s ease',
-                                    zIndex: isActive ? 50 : 10 - Math.abs(Math.round(rel)),
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 50,
-                                    pointerEvents: isActive ? 'auto' : 'none'
-                                }}
-                            >
-                                <div className="how-node-circle" style={{
-                                    '--accent': item.color,
-                                    width: 120, height: 120, // MASSIVE
-                                    flexShrink: 0,
-                                    border: isActive ? `10px solid ${item.color}` : `5px solid #e2e8f0`,
-                                    background: isActive ? '#fff' : 'rgba(239, 246, 255, 0.6)',
-                                    boxShadow: isActive ? `0 45px 90px -20px ${item.color}60, 0 0 30px ${item.color}40` : 'none',
-                                    transform: isActive ? 'scale(1.2)' : 'scale(1)',
-                                    transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                    <span className="node-num" style={{
-                                        color: isActive ? item.color : '#3b82f6',
-                                        fontSize: isActive ? '3.8rem' : '2rem',
-                                        opacity: isActive ? 1 : 0.4,
-                                        fontWeight: 900,
-                                        transform: 'translateY(-6px)'
-                                    }}>
-                                        {item.step.replace('0', '')}
-                                    </span>
-                                </div>
-
-                                <div className="how-node-card" style={{
-                                    width: 550, // MUCH LARGER
-                                    padding: '50px 60px',
-                                    textAlign: 'left',
-                                    background: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
-                                    border: isActive ? `1px solid ${item.color}50` : '1px solid #e2e8f0',
-                                    boxShadow: isActive ? '0 50px 100px -25px rgba(0,0,0,0.18)' : 'none',
-                                    borderRadius: 50,
-                                    transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                    opacity: isActive ? 1 : 0.1,
-                                    backdropFilter: isActive ? 'none' : 'blur(8px)'
-                                }}>
-                                    <h3 className="how-node-title" style={{
-                                        fontSize: '2.2rem',
-                                        marginBottom: '15px',
-                                        color: isActive ? '#0f172a' : '#64748b',
-                                        fontWeight: 800
-                                    }}>{item.title}</h3>
-                                    <p className="how-node-desc" style={{
-                                        fontSize: '1.25rem',
-                                        lineHeight: '1.7',
-                                        color: isActive ? '#475569' : '#94a3b8',
-                                        fontWeight: 500
-                                    }}>{item.desc}</p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        </section>
-    );
-}
 
 
 
@@ -1207,45 +1021,7 @@ function Partners() {
 }
 
 
-/* ══════════════════════════════════════════════
-   CONTACT / FOOTER
-══════════════════════════════════════════════ */
-function Footer() {
-    const navigate = useNavigate();
-    return (
-        <footer className="rp-footer" id="contact">
-            <div className="rp-footer__top">
-                <div className="rp-footer__brand">
-                    <img src={logo} alt="Rupiksha" className="rp-footer__logo" />
-                    <p>India's most trusted retail fintech platform — empowering millions every day.</p>
-                    <div className="rp-footer__socials">
-                        {['📘', '🐦', '📸', '▶️', '💼'].map((s, i) => <a key={i} href="#!" className="rp-social">{s}</a>)}
-                    </div>
-                </div>
-                <div className="rp-footer__links">
-                    <h5>Services</h5>
-                    {['Money Transfer', 'AEPS', 'Bill Payment', 'Recharge', 'Travel', 'CMS'].map(l => <a key={l} href="#services">{l}</a>)}
-                </div>
-                <div className="rp-footer__links">
-                    <h5>Company</h5>
-                    <button className="rp-footer-link-btn" onClick={() => navigate('/about')}>About Us</button>
-                    {['Careers', 'Blog', 'Press', 'Privacy Policy', 'Terms'].map(l => <a key={l} href="#!">{l}</a>)}
-                </div>
-                <div className="rp-footer__contact">
-                    <h5>Contact</h5>
-                    <p>📧 support@rupiksha.com</p>
-                    <p>📞 1800-XXX-XXXX (Toll-Free)</p>
-                    <p>🏢 RuPiKsha Digital Services Pvt. Ltd.<br />New Delhi, India</p>
-                    <button className="rp-btn rp-btn--primary rp-btn--sm" style={{ marginTop: 16 }} onClick={() => navigate('/portal')}>Login Now</button>
-                </div>
-            </div>
-            <div className="rp-footer__bottom">
-                <span>© 2026 RuPiKsha Digital Services Pvt. Ltd. | All rights reserved.</span>
-                <span>Made with ❤️ for Bharat</span>
-            </div>
-        </footer>
-    );
-}
+
 
 /* ══════════════════════════════════════════════
    APP
@@ -1259,7 +1035,7 @@ export default function Home() {
                 <Hero />
                 <Stats />
                 <Services />
-                <HowItWorks />
+                <VerticalCardSlider />
                 <Advantage />
                 <Partners />
                 <Footer />

@@ -16,6 +16,7 @@ import AdminLogin from './AdminLogin';
 import Home from './Home';
 import About from './About';
 import Contact from './Contact';
+import Leadership from './Leadership';
 import RetailerDetails from './components/admin/RetailerDetails';
 import './App.css';
 
@@ -106,6 +107,7 @@ function App() {
           {/* ── Shared Landing & Portal Selector ── */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/leadership" element={<Leadership />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/portal" element={<Login />} />
           <Route path="/login" element={<Login />} />

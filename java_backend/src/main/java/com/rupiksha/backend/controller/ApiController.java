@@ -427,10 +427,11 @@ public class ApiController {
             
             // Insurance & others: DOB often goes into Field1 or dob or Optional1
             if (dob != null && !dob.isEmpty()) {
-                url.append("&Field1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&dob=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&Optional1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&DOB=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                String safeDob = dob.replaceAll("[^a-zA-Z0-9]", "");
+                url.append("&Field1=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&dob=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&Optional1=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&DOB=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
             } else {
                 url.append("&Field1=NONE");
             }
@@ -529,10 +530,11 @@ public class ApiController {
             }
             
             if (dob != null && !dob.isEmpty()) {
-                url.append("&Field1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&dob=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&Optional1=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
-                url.append("&DOB=").append(URLEncoder.encode(dob, StandardCharsets.UTF_8));
+                String safeDob = dob.replaceAll("[^a-zA-Z0-9]", "");
+                url.append("&Field1=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&dob=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&Optional1=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
+                url.append("&DOB=").append(URLEncoder.encode(safeDob, StandardCharsets.UTF_8));
             } else {
                 url.append("&Field1=NONE");
             }

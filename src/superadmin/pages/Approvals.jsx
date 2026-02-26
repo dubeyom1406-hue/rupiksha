@@ -42,9 +42,9 @@ const Approvals = () => {
             const allUsers = await dataService.getAllUsers();
 
             // Map users to appropriate states based on roles
-            const retailers = allUsers.filter(u => u.role === 'RETAILER' || !u.role);
-            const dists = allUsers.filter(u => u.role === 'DISTRIBUTOR');
-            const sas = allUsers.filter(u => u.role === 'SUPERADMIN');
+            const retailers = allUsers.filter(u => u.role?.toUpperCase() === 'RETAILER' || !u.role);
+            const dists = allUsers.filter(u => u.role?.toUpperCase() === 'DISTRIBUTOR');
+            const sas = allUsers.filter(u => u.role?.toUpperCase() === 'SUPERADMIN' || u.role?.toUpperCase() === 'SUPER_DISTRIBUTOR');
 
             setData({ ...dataService.getData(), users: retailers });
             setDistributors(dists);
@@ -330,9 +330,9 @@ const Approvals = () => {
         );
     };
 
-    const pendingUsers = (data.users || []).filter(u => u.status === 'Pending');
-    const pendingDists = (distributors || []).filter(d => d.status === 'Pending');
-    const pendingSAs = (superadmins || []).filter(s => s.status === 'Pending');
+    const pendingUsers = (data.users || []).filter(u => u.status?.toLowerCase() === 'pending');
+    const pendingDists = (distributors || []).filter(d => d.status?.toLowerCase() === 'pending');
+    const pendingSAs = (superadmins || []).filter(s => s.status?.toLowerCase() === 'pending');
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -426,9 +426,18 @@ const Approvals = () => {
             {showCredentialCard && <CredentialSharerModal />}
 
             <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Pending Approvals</h1>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review new registrations</p>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Pending Approvals</h1>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Review new registrations</p>
+                    </div>
+                    <button
+                        onClick={refreshData}
+                        className="p-3 bg-white border border-slate-200 text-indigo-600 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all active:scale-95 shadow-sm"
+                        title="Refresh Data"
+                    >
+                        <RefreshCcw size={20} />
+                    </button>
                 </div>
                 {status && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className={`px-4 py-2 rounded-lg text-white text-xs font-bold uppercase tracking-widest ${status.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}>
@@ -467,7 +476,7 @@ const Approvals = () => {
                                         {sa.mobile}<br />{sa.email}
                                     </td>
                                     <td className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">
-                                        {sa.businessName}
+                                        {sa.business_name || sa.businessName || 'N/A'}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex justify-center gap-2">
@@ -503,6 +512,7 @@ const Approvals = () => {
                         <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th className="px-6 py-4">Retailer</th>
+                                <th className="px-6 py-4">Business</th>
                                 <th className="px-6 py-4">Contact</th>
                                 <th className="px-6 py-4">Location</th>
                                 <th className="px-6 py-4 text-center">Action</th>
@@ -514,6 +524,9 @@ const Approvals = () => {
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-slate-800 text-sm">{user.name || 'UNNAMED'}</div>
                                         <div className="text-[10px] text-slate-400 font-mono">{user.mobile}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-[10px] font-black uppercase text-indigo-600">{user.business_name || user.businessName || 'N/A'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-xs font-medium text-slate-500">{user.email}</td>
                                     <td className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">{user.state}</td>
@@ -556,7 +569,7 @@ const Approvals = () => {
                             {pendingDists.map((d, idx) => (
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-800 text-sm">{d.businessName}</div>
+                                        <div className="font-bold text-slate-800 text-sm">{d.business_name || d.businessName || 'N/A'}</div>
                                         <div className="text-[10px] text-amber-600 font-black uppercase">{d.name}</div>
                                     </td>
                                     <td className="px-6 py-4 text-[10px] font-bold text-slate-400">

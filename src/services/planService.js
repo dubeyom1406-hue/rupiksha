@@ -9,25 +9,13 @@ export const planService = {
         HISTORY: 'rupiksha_plan_history'
     },
 
-    // --- LIVE DB METHODS ---
-    getPlansForType: async function (role) {
-        try {
-            const res = await fetch(`${BACKEND_URL}/plans?role=${role.toUpperCase()}`);
-            const data = await res.json();
-            return data.success ? data.plans : [];
-        } catch (e) { return []; }
+    getPlansForType: function (role) {
+        const all = this.getAllPlans();
+        return all[role.toLowerCase()] || [];
     },
 
-    getPlanById: async function (planId) {
-        try {
-            // Check legacy first
-            const legacy = this.getAllPlansFlat().find(p => p.id === planId);
-            if (legacy) return legacy;
-
-            const res = await fetch(`${BACKEND_URL}/plans`);
-            const data = await res.json();
-            return data.plans?.find(p => p.id === planId) || null;
-        } catch (e) { return null; }
+    getPlanById: function (planId) {
+        return this.getAllPlansFlat().find(p => p.id === planId) || null;
     },
 
     // --- LEGACY METHODS (REQUIRED BY ADMIN/DASHBOARD) ---

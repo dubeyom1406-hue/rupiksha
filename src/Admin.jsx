@@ -6,7 +6,7 @@ import {
     ArrowLeft, CheckCircle2, AlertTriangle, Plus, Trash2, Edit3, FileText,
     BarChart3, Megaphone, Zap, Upload, X, ImageIcon, Play,
     Camera, Eye, IndianRupee, ChevronRight, Wallet, TrendingUp, History, ArrowRight,
-    Building2, UserPlus, UserMinus, ShieldCheck, Link2, Copy, Crown, ChevronDown
+    Building2, UserPlus, UserMinus, ShieldCheck, Link2, Copy, Crown, ChevronDown, Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dataService } from './services/dataService';
@@ -27,8 +27,9 @@ const Admin = () => {
     }, [navigate]);
 
     const [data, setData] = useState(dataService.getData());
-    const [distributors, setDistributors] = useState(sharedDataService.getAllDistributors());
-    const [superadmins, setSuperadmins] = useState(sharedDataService.getAllSuperAdmins());
+    const [distributors, setDistributors] = useState([]);
+    const [superadmins, setSuperadmins] = useState([]);
+    const [trashUsers, setTrashUsers] = useState([]);
     const [activeSection, setActiveSection] = useState('Approvals');
     const [expandedSA, setExpandedSA] = useState(null); // ID of expanded SuperAdmin row
     const [expandedNav, setExpandedNav] = useState(null); // which nav group is expanded
@@ -46,6 +47,7 @@ const Admin = () => {
         name: '', businessName: '', mobile: '', email: '',
         password: '', city: '', state: 'Bihar'
     });
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
     // Distributor Addition States
     const [showAddDistModal, setShowAddDistModal] = useState(false);
@@ -58,6 +60,8 @@ const Admin = () => {
         name: '', businessName: '', mobile: '', email: '',
         password: '', city: '', state: 'Bihar', ownerId: ''
     });
+
+    const [approvingIds, setApprovingIds] = useState(new Set()); // Usernames or IDs currently being approved (email sending)
 
     const [showSuccessView, setShowSuccessView] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
@@ -89,24 +93,10 @@ const Admin = () => {
         try {
             const newSA = await sharedDataService.registerSuperAdmin({
                 ...saForm,
-                status: 'Approved'
+                status: 'Pending'
             });
 
             if (newSA) {
-                const creds = {
-                    to: saForm.email,
-                    name: saForm.name,
-                    loginId: saForm.mobile, // Using mobile as Login ID
-                    password: saForm.password,
-                    addedBy: 'RUPIKSHA ADMIN',
-                    portalType: 'Super Distributor'
-                };
-
-                // Send Credentials Email
-                const emailModule = await import('./services/emailService');
-                await emailModule.sendCredentialsEmail(creds);
-
-                setCreatedCredentials(creds);
                 setShowSuccessView(true);
                 await refreshData();
                 setShowAddSAModal(false);
@@ -147,24 +137,10 @@ const Admin = () => {
         try {
             const newDist = await sharedDataService.registerDistributor({
                 ...distForm,
-                status: 'Approved'
+                status: 'Pending'
             }, distForm.ownerId || null);
 
             if (newDist) {
-                const creds = {
-                    to: distForm.email,
-                    name: distForm.name,
-                    loginId: distForm.mobile, // Using mobile as Login ID
-                    password: distForm.password,
-                    addedBy: 'RUPIKSHA ADMIN',
-                    portalType: 'Distributor'
-                };
-
-                // Send Credentials Email
-                const emailModule = await import('./services/emailService');
-                await emailModule.sendCredentialsEmail(creds);
-
-                setCreatedCredentials(creds);
                 setShowSuccessView(true);
                 refreshData();
                 setShowAddDistModal(false);
@@ -193,17 +169,45 @@ const Admin = () => {
         try {
             const allUsers = await dataService.getAllUsers();
 
-            // Filter users by role
-            const retailers = allUsers.filter(u => u.role === 'RETAILER' || !u.role);
+            // Filter users by role and status (Pending/Approved)
+            const retailers = allUsers.filter(u => u.role === 'RETAILER');
             const dists = allUsers.filter(u => u.role === 'DISTRIBUTOR');
-            const sas = allUsers.filter(u => u.role === 'SUPER_DISTRIBUTOR' || u.role === 'SUPERADMIN' || u.role === 'ADMIN');
+            const sas = allUsers.filter(u => u.role === 'SUPER_DISTRIBUTOR');
 
             const currentData = dataService.getData();
             setData({ ...currentData, users: retailers });
             setDistributors(dists);
             setSuperadmins(sas);
+
+            const trash = await dataService.getTrashUsers();
+            setTrashUsers(trash);
         } catch (e) {
             console.error("Failed to refresh live data", e);
+        } finally {
+            setIsLoadingData(false);
+        }
+    };
+
+    const handleResendCredentials = async (user) => {
+        if (!user.email) {
+            alert(`Error: No email address found for user ${user.username}. Please update their profile with an email first.`);
+            return;
+        }
+        const res = await dataService.resendCredentials(user);
+        if (res.success) {
+            alert(`Credentials resent successfully to ${user.email}`);
+        } else {
+            alert(`Failed to resend credentials: ${res.message}`);
+        }
+    };
+
+    const handleRestoreUser = async (username) => {
+        const res = await dataService.restoreUser(username);
+        if (res.success) {
+            setStatus({ type: 'success', message: 'User restored from trash' });
+            refreshData();
+        } else {
+            alert('Failed to restore');
         }
     };
 
@@ -236,14 +240,23 @@ const Admin = () => {
         }
     };
 
-    const handleLoginAsRetailer = async (username) => {
-        // Use the admin's own password as the master key
-        const result = await dataService.loginUser(username, 'admin');
-        if (result.success) {
-            navigate('/dashboard');
-        } else {
-            alert(result.message || "Failed to login as retailer");
-        }
+    const handleLoginAsRetailer = (user) => {
+        // Just set the user in storage and navigate - bypass API login
+        localStorage.setItem('rupiksha_user', JSON.stringify(user));
+        localStorage.setItem('user', JSON.stringify(user)); // Compatibility for components using 'user' key
+        navigate('/dashboard');
+    };
+
+    const handleLoginAsDistributor = (dist) => {
+        localStorage.setItem('rupiksha_user', JSON.stringify(dist));
+        localStorage.setItem('user', JSON.stringify(dist)); // Compatibility
+        navigate('/distributor');
+    };
+
+    const handleLoginAdminSA = (sa) => {
+        localStorage.setItem('rupiksha_user', JSON.stringify(sa));
+        localStorage.setItem('user', JSON.stringify(sa)); // Compatibility
+        navigate('/superadmin');
     };
 
     // Components to render different edit forms
@@ -580,9 +593,10 @@ const Admin = () => {
         }
 
         const targetUser = selectedUser;
-        await dataService.approveUser(targetUser.username, approvalForm.password, approvalForm.partyCode, approvalForm.distributorId);
+        const targetUsername = targetUser.username;
 
-        refreshData();
+        // 1. Mark as currently being processed
+        setApprovingIds(prev => new Set(prev).add(targetUsername));
         setShowApprovalModal(false);
 
         const shareData = {
@@ -599,31 +613,58 @@ const Admin = () => {
         setCredentialData(shareData);
         setShowCredentialCard(true);
 
-        // Call the real backend email service
-        const result = await sendApprovalEmail({
-            to: targetUser.email,
-            name: shareData.name,
-            loginId: shareData.mobile,
-            password: shareData.password,
-            idLabel: shareData.idLabel,
-            idValue: shareData.idValue,
-            portalType: shareData.portalType
-        });
+        try {
+            // 2. Call the real backend email service FIRST
+            const result = await sendApprovalEmail({
+                to: targetUser.email,
+                name: shareData.name,
+                loginId: shareData.mobile,
+                password: shareData.password,
+                idLabel: shareData.idLabel,
+                idValue: shareData.idValue,
+                portalType: shareData.portalType
+            });
 
-        // Update UI with success/fail status
-        setCredentialData(prev => ({
-            ...prev,
-            emailStatus: result.success ? 'sent' : 'failed',
-            error: result.success ? null : result.message
-        }));
+            if (result.success) {
+                // 3. ONLY if email sent, update DB status to Approved
+                await dataService.approveUser(targetUsername, approvalForm.password, approvalForm.partyCode, approvalForm.distributorId);
+
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'sent'
+                }));
+
+                // Refresh UI to move from Pending to Active
+                refreshData();
+            } else {
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'failed',
+                    error: result.message || 'Email delivery failed'
+                }));
+            }
+        } catch (err) {
+            setCredentialData(prev => ({
+                ...prev,
+                emailStatus: 'failed',
+                error: 'Network error during email dispatch'
+            }));
+        } finally {
+            // 4. Finished processing
+            setApprovingIds(prev => {
+                const next = new Set(prev);
+                next.delete(targetUsername);
+                return next;
+            });
+        }
     };
 
 
     const handleReject = async (username) => {
-        if (window.confirm(`Are you sure you want to reject and delete user ${username}?`)) {
-            await dataService.rejectUser(username);
+        if (window.confirm(`Are you sure you want to move user ${username} to trash?`)) {
+            await dataService.deleteUser(username);
             refreshData();
-            setStatus({ type: 'error', message: `User ${username} rejected and removed.` });
+            setStatus({ type: 'error', message: `User ${username} moved to trash.` });
             setTimeout(() => setStatus(null), 3000);
         }
     };
@@ -641,16 +682,20 @@ const Admin = () => {
             alert('Please set a password.');
             return;
         }
-        sharedDataService.approveSuperAdmin(selectedSA.id, saApprovalForm.password);
-        refreshData();
+
+        const targetSA = selectedSA;
+        const targetId = targetSA.id;
+
+        // 1. Mark as processing
+        setApprovingIds(prev => new Set(prev).add(targetId));
         setShowSAApprovalModal(false);
 
         const shareData = {
-            name: selectedSA.name,
-            mobile: selectedSA.mobile,
+            name: targetSA.name,
+            mobile: targetSA.mobile,
             password: saApprovalForm.password,
             idLabel: 'SuperAdmin ID',
-            idValue: selectedSA.id,
+            idValue: targetId,
             portalType: 'SuperAdmin',
             url: window.location.origin,
             emailStatus: 'sending'
@@ -658,20 +703,48 @@ const Admin = () => {
         setCredentialData(shareData);
         setShowCredentialCard(true);
 
-        const result = await sendApprovalEmail({
-            to: selectedSA.email,
-            name: shareData.name,
-            loginId: shareData.mobile,
-            password: shareData.password,
-            idLabel: shareData.idLabel,
-            idValue: shareData.idValue,
-            portalType: shareData.portalType
-        });
-        setCredentialData(prev => ({
-            ...prev,
-            emailStatus: result.success ? 'sent' : 'failed',
-            error: result.success ? null : result.message
-        }));
+        try {
+            // 2. Email First
+            const result = await sendApprovalEmail({
+                to: targetSA.email,
+                name: shareData.name,
+                loginId: shareData.mobile,
+                password: shareData.password,
+                idLabel: shareData.idLabel,
+                idValue: shareData.idValue,
+                portalType: shareData.portalType
+            });
+
+            if (result.success) {
+                // 3. Status Change
+                sharedDataService.approveSuperAdmin(targetId, saApprovalForm.password);
+
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'sent'
+                }));
+                refreshData();
+            } else {
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'failed',
+                    error: result.message || 'Email delivery failed'
+                }));
+            }
+        } catch (err) {
+            setCredentialData(prev => ({
+                ...prev,
+                emailStatus: 'failed',
+                error: 'Connection error'
+            }));
+        } finally {
+            // 4. Cleanup
+            setApprovingIds(prev => {
+                const next = new Set(prev);
+                next.delete(targetId);
+                return next;
+            });
+        }
     };
 
     const SAApprovalModal = () => (
@@ -802,8 +875,16 @@ const Admin = () => {
                                         <td className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">{user.state}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleApproveClick(user)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><CheckCircle2 size={18} /></button>
-                                                <button onClick={() => handleReject(user.username)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                {approvingIds.has(user.username) ? (
+                                                    <span className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase animate-pulse">
+                                                        <RefreshCcw size={14} className="animate-spin" /> Processing
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => handleApproveClick(user)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><CheckCircle2 size={18} /></button>
+                                                        <button onClick={() => handleReject(user.username)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -850,8 +931,16 @@ const Admin = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleDistApproveClick(d)} className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-500 hover:text-white transition-all"><ShieldCheck size={18} /></button>
-                                                <button onClick={() => { if (window.confirm('Reject?')) { sharedDataService.rejectDistributor(d.id); refreshDists(); } }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                {approvingIds.has(d.id) ? (
+                                                    <span className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase animate-pulse">
+                                                        <RefreshCcw size={14} className="animate-spin" /> Processing
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => handleDistApproveClick(d)} className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-500 hover:text-white transition-all"><ShieldCheck size={18} /></button>
+                                                        <button onClick={() => { if (window.confirm('Reject?')) { sharedDataService.rejectDistributor(d.id); refreshDists(); } }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -893,8 +982,16 @@ const Admin = () => {
                                         <td className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">{sa.city}, {sa.state}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleSAApproveClick(sa)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-500 hover:text-white transition-all"><CheckCircle2 size={18} /></button>
-                                                <button onClick={() => { if (window.confirm('Delete?')) { sharedDataService.rejectSuperAdmin(sa.id); refreshData(); } }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                {approvingIds.has(sa.id) ? (
+                                                    <span className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase animate-pulse">
+                                                        <RefreshCcw size={14} className="animate-spin" /> Processing
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => handleSAApproveClick(sa)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-500 hover:text-white transition-all"><CheckCircle2 size={18} /></button>
+                                                        <button onClick={() => { if (window.confirm('Delete?')) { sharedDataService.rejectSuperAdmin(sa.id); refreshData(); } }} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} /></button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -979,6 +1076,13 @@ const Admin = () => {
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
                                         <button
+                                            onClick={() => handleResendCredentials(user)}
+                                            className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
+                                            title="Resend Credentials"
+                                        >
+                                            <Mail size={16} />
+                                        </button>
+                                        <button
                                             onClick={() => handleLoginAsRetailer(user.username)}
                                             className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1 px-3"
                                             title="Login as Retailer"
@@ -1008,6 +1112,49 @@ const Admin = () => {
                 </table>
             </div >
         </div >
+    );
+
+    const TrashTable = () => (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+            <div className="p-6 border-b flex justify-between items-center bg-red-50/30">
+                <h3 className="font-bold text-slate-700 flex items-center gap-2"><Trash2 size={18} className="text-red-500" /> Trash (Recyclable)</h3>
+                <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-[10px] font-black">{trashUsers.length} REMOVED</span>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <tr>
+                            <th className="px-6 py-4">User</th>
+                            <th className="px-6 py-4">Role</th>
+                            <th className="px-6 py-4">Deleted At</th>
+                            <th className="px-6 py-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {trashUsers.map((user, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="font-bold text-slate-700">{user.name || user.username}</div>
+                                    <div className="text-[10px] text-slate-400">{user.mobile}</div>
+                                </td>
+                                <td className="px-6 py-4"><span className="text-[10px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded">{user.role}</span></td>
+                                <td className="px-6 py-4 text-[10px] font-bold text-slate-400">{new Date(user.updated_at || user.created_at).toLocaleDateString()}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex justify-center gap-2">
+                                        <button onClick={() => handleRestoreUser(user.username)} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2">
+                                            <RefreshCcw size={14} /> Restore
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        {trashUsers.length === 0 && (
+                            <tr><td colSpan={4} className="p-12 text-center text-slate-300 font-bold italic">Trash is empty.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     );
 
     const AddSuperAdminModal = () => (
@@ -1147,8 +1294,10 @@ const Admin = () => {
         if (!distApprovalForm.password) { alert('Please set a login password.'); return; }
 
         const targetDist = selectedDist;
-        sharedDataService.approveDistributor(targetDist.id, distApprovalForm.password, distApprovalForm.distribId);
-        refreshDists();
+        const targetId = targetDist.id;
+
+        // 1. Mark as processing
+        setApprovingIds(prev => new Set(prev).add(targetId));
         setShowDistApprovalModal(false);
 
         const shareData = {
@@ -1165,23 +1314,50 @@ const Admin = () => {
         setCredentialData(shareData);
         setShowCredentialCard(true);
 
-        // Real backend email
-        const result = await sendApprovalEmail({
-            to: targetDist.email,
-            name: shareData.name,
-            loginId: shareData.mobile,
-            password: shareData.password,
-            idLabel: shareData.idLabel,
-            idValue: shareData.idValue,
-            portalType: shareData.portalType
-        });
+        try {
+            // 2. Email First
+            const result = await sendApprovalEmail({
+                to: targetDist.email,
+                name: shareData.name,
+                loginId: shareData.mobile,
+                password: shareData.password,
+                idLabel: shareData.idLabel,
+                idValue: shareData.idValue,
+                portalType: shareData.portalType
+            });
 
-        // Update UI
-        setCredentialData(prev => ({
-            ...prev,
-            emailStatus: result.success ? 'sent' : 'failed',
-            error: result.success ? null : result.message
-        }));
+            if (result.success) {
+                // 3. Update DB
+                sharedDataService.approveDistributor(targetId, distApprovalForm.password, distApprovalForm.distribId);
+
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'sent'
+                }));
+                // Need to refresh both distributors and the main data
+                refreshDists();
+                refreshData();
+            } else {
+                setCredentialData(prev => ({
+                    ...prev,
+                    emailStatus: 'failed',
+                    error: result.message || 'Email delivery failed'
+                }));
+            }
+        } catch (err) {
+            setCredentialData(prev => ({
+                ...prev,
+                emailStatus: 'failed',
+                error: 'Connection error'
+            }));
+        } finally {
+            // 4. Cleanup
+            setApprovingIds(prev => {
+                const next = new Set(prev);
+                next.delete(targetId);
+                return next;
+            });
+        }
     };
 
     const CredentialSharerModal = () => {
@@ -1262,15 +1438,6 @@ const Admin = () => {
         );
     };
 
-    const handleLoginAsDistributor = (dist) => {
-        sharedDataService.setCurrentDistributor(dist);
-        navigate('/distributor');
-    };
-
-    const handleLoginAsSuperAdmin = (sa) => {
-        sharedDataService.setCurrentSuperAdmin(sa);
-        navigate('/superadmin');
-    };
 
     const DistApprovalModal = () => (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -1553,14 +1720,22 @@ const Admin = () => {
                                             <td className="px-6 py-4 text-[10px] font-bold text-slate-400">{new Date(d.createdAt).toLocaleDateString()}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-center gap-2">
-                                                    <button onClick={() => handleDistApproveClick(d)}
-                                                        className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-500 hover:text-white transition-all shadow-sm"
-                                                        title="Approve Distributor"
-                                                    ><ShieldCheck size={16} /></button>
-                                                    <button onClick={() => { sharedDataService.rejectDistributor(d.id); refreshDists(); }}
-                                                        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                                                        title="Reject"
-                                                    ><X size={16} /></button>
+                                                    {approvingIds.has(d.id) ? (
+                                                        <span className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase animate-pulse">
+                                                            <RefreshCcw size={14} className="animate-spin" /> Processing
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <button onClick={() => handleDistApproveClick(d)}
+                                                                className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-500 hover:text-white transition-all shadow-sm"
+                                                                title="Approve Distributor"
+                                                            ><ShieldCheck size={16} /></button>
+                                                            <button onClick={() => { if (window.confirm('Reject?')) { sharedDataService.rejectDistributor(d.id); refreshDists(); } }}
+                                                                className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                                                title="Reject"
+                                                            ><X size={16} /></button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -1621,6 +1796,13 @@ const Admin = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button
+                                                    onClick={() => handleResendCredentials(d)}
+                                                    className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100"
+                                                    title="Resend Credentials"
+                                                >
+                                                    <Mail size={14} />
+                                                </button>
+                                                <button
                                                     onClick={() => { setAssignTargetDist(d); setShowAssignModal(true); }}
                                                     className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors flex items-center gap-1 px-2.5"
                                                     title="Assign Retailers"
@@ -1637,7 +1819,7 @@ const Admin = () => {
                                                     <span className="text-[9px] font-black uppercase">Login</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => { if (window.confirm(`Delete distributor ${d.name}?`)) { sharedDataService.rejectDistributor(d.id); refreshDists(); } }}
+                                                    onClick={() => handleReject(d.username)}
                                                     className="p-1.5 bg-red-50 text-red-400 rounded-lg hover:bg-red-100"
                                                 ><Trash2 size={14} /></button>
                                             </div>
@@ -1709,6 +1891,7 @@ const Admin = () => {
                     {[
                         { id: 'Approvals', icon: CheckCircle2 },
                         { id: 'Dashboard', icon: LayoutDashboard },
+                        { id: 'Trash', icon: Trash2 },
                         { id: 'Services', icon: Package },
                         { id: 'Promotions', icon: Video },
                         { id: 'Stats', icon: BarChart3 },
@@ -1847,6 +2030,7 @@ const Admin = () => {
 
                     {activeSection === 'Approvals' && <ApprovalsTable />}
                     {activeSection === 'Dashboard' && <DashboardEditor />}
+                    {activeSection === 'Trash' && <TrashTable />}
                     {activeSection === 'Stats' && <StatsEditor />}
                     {activeSection === 'Services' && <ServicesEditor />}
                     {activeSection === 'Promotions' && <PromotionsEditor />}
@@ -1969,6 +2153,13 @@ const Admin = () => {
                                                         <td className="px-8 py-6 text-center">
                                                             <div className="flex justify-center gap-3">
                                                                 <button
+                                                                    onClick={() => handleResendCredentials(sa)}
+                                                                    className="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100"
+                                                                    title="Resend Credentials"
+                                                                >
+                                                                    <Mail size={16} />
+                                                                </button>
+                                                                <button
                                                                     onClick={() => {
                                                                         sessionStorage.setItem('superadmin_user', JSON.stringify(sa));
                                                                         navigate('/superadmin');
@@ -1977,7 +2168,7 @@ const Admin = () => {
                                                                 >
                                                                     <Eye size={14} /> Full Access
                                                                 </button>
-                                                                <button onClick={() => { if (window.confirm('Delete?')) { sharedDataService.rejectSuperAdmin(sa.id); refreshData(); } }} className="p-2.5 bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
+                                                                <button onClick={() => handleReject(sa.username)} className="p-2.5 bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
                                                                     <Trash2 size={16} />
                                                                 </button>
                                                             </div>

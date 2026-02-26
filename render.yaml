@@ -9,24 +9,37 @@ services:
       - key: PORT
         value: 5001
       - key: DB_HOST
-        sync: false
+        value: rupiksha-dubeyom1406-6e39.i.aivencloud.com
       - key: DB_PORT
-        sync: false
+        value: "27817"
       - key: DB_USER
-        sync: false
+        value: avnadmin
       - key: DB_PASS
-        sync: false
+        value: "[REDACTED_SECURE_PASSWORD]"
       - key: DB_NAME
-        sync: false
+        value: defaultdb
       - key: DB_SSL
         value: "true"
       - key: EMAIL_SERVICE
         value: gmail
       - key: EMAIL_USER
-        sync: false
+        value: dubeyom1406@gmail.com
       - key: EMAIL_PASS
-        sync: false
+        value: "[REDACTED_APP_PASSWORD]"
       - key: FRONTEND_URL
-        sync: false
+        value: https://rupiksha.onrender.com
       - key: FAST2SMS_KEY
-        sync: false
+        value: "[REDACTED_API_KEY]"
+
+  - type: static
+    name: rupiksha
+    env: static
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://rupiksha-backend.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,10 +1,619 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from './assets/rupiksha_logo.png';
-import { Zap, ShieldCheck, Users, Target, Eye, Smartphone, Building2, Wallet, Shield, Infinity, Headset, ArrowLeft } from 'lucide-react';
+import { Zap, ShieldCheck, Users, Target, Eye, Smartphone, Building2, Wallet, Shield, Infinity, Headset, ArrowLeft, Heart, Award, Globe, Handshake } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Environment, ContactShadows, PresentationControls } from '@react-three/drei';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
+import Footer from './components/Footer';
+
+function FlipCard({ card }) {
+    const [flipped, setFlipped] = useState(false);
+
+    return (
+        <div
+            style={{
+                perspective: "1000px",
+                width: "280px",
+                height: "360px",
+                cursor: "pointer",
+                flexShrink: 0,
+            }}
+            onMouseEnter={() => setFlipped(true)}
+            onMouseLeave={() => setFlipped(false)}
+        >
+            <div
+                style={{
+                    position: "relative",
+                    width: "100%",
+                    height: "100%",
+                    transformStyle: "preserve-3d",
+                    transition: "transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)",
+                    transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                }}
+            >
+                {/* FRONT */}
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                        background: card.previewBg,
+                        borderRadius: "20px",
+                        padding: "36px 28px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textAlign: "center",
+                        boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "68px",
+                            height: "68px",
+                            borderRadius: "50%",
+                            background: "white",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "28px",
+                            marginBottom: "24px",
+                            boxShadow: `0 4px 16px ${card.accentColor}30`,
+                        }}
+                    >
+                        {card.icon}
+                    </div>
+                    <h2
+                        style={{
+                            fontSize: "22px",
+                            fontWeight: "800",
+                            color: "#1a1f36",
+                            margin: "0 0 14px 0",
+                            fontFamily: "'Inter', sans-serif",
+                            letterSpacing: "-0.3px",
+                        }}
+                    >
+                        {card.title}
+                    </h2>
+                    <p
+                        style={{
+                            fontSize: "14px",
+                            lineHeight: "1.7",
+                            color: "#6b7280",
+                            margin: 0,
+                        }}
+                    >
+                        {card.description}
+                    </p>
+                </div>
+
+                {/* BACK */}
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                        transform: "rotateY(180deg)",
+                        background: "#fdf6ee",
+                        borderRadius: "20px",
+                        overflow: "hidden",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                        display: "flex",
+                        flexDirection: "column",
+                    }}
+                >
+                    {/* Top dark banner */}
+                    <div
+                        style={{
+                            background: card.backBg,
+                            padding: "22px 24px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                        }}
+                    >
+                        <span style={{ fontSize: "20px" }}>{card.icon}</span>
+                        <span
+                            style={{
+                                color: "white",
+                                fontWeight: "800",
+                                fontSize: "17px",
+                                fontFamily: "'Inter', sans-serif",
+                                letterSpacing: "0.3px",
+                            }}
+                        >
+                            {card.logo}
+                        </span>
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ padding: "24px 24px 28px", flex: 1, display: "flex", flexDirection: "column" }}>
+                        <h3
+                            style={{
+                                fontSize: "20px",
+                                fontWeight: "800",
+                                color: "#1a1f36",
+                                margin: "0 0 10px 0",
+                                fontFamily: "'Inter', sans-serif",
+                            }}
+                        >
+                            {card.title}
+                        </h3>
+                        <p
+                            style={{
+                                fontSize: "13.5px",
+                                lineHeight: "1.7",
+                                color: "#555",
+                                margin: "0 0 auto 0",
+                            }}
+                        >
+                            {card.description}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const benefits = [
+    {
+        id: 1,
+        icon: "📱",
+        title: "Set-up your digital business from phone or laptop",
+        description: "Operate from anywhere -- your home or shop. No inventory, no warehouse, no manpower required.",
+        frontGradient: "linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)",
+        backGradient: "linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%)",
+        accent: "#3b82f6",
+        tag: "Easy Start",
+        number: "01",
+    },
+    {
+        id: 2,
+        icon: "🏦",
+        title: "Multi-service distribution from one platform",
+        description: "Offer Banking, Payments, Travel, Insurance, Bill Payments & Recharge services from one platform. You can offer any or all service.",
+        frontGradient: "linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)",
+        backGradient: "linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%)",
+        accent: "#10b981",
+        tag: "All-in-One",
+        number: "02",
+    },
+    {
+        id: 3,
+        icon: "💰",
+        title: "Earn ₹40,000 to ₹60,000 per month",
+        description: "With just 5-7 retailers in your network you can easily add an extra ₹40000 to ₹60000 income per month. Onboard more retailers to earn more.",
+        frontGradient: "linear-gradient(145deg, #ffffff 0%, #fdf4ff 100%)",
+        backGradient: "linear-gradient(145deg, #fdf4ff 0%, #fae8ff 100%)",
+        accent: "#d946ef",
+        tag: "High Income",
+        number: "03",
+    },
+    {
+        id: 4,
+        icon: "⚡",
+        title: "One time onboarding",
+        description: "Simple and easy on-boarding process for your network. Retailers once on-boarded can use any of our existing services or new products offered and keep adding to their income.",
+        frontGradient: "linear-gradient(145deg, #ffffff 0%, #fffbeb 100%)",
+        backGradient: "linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%)",
+        accent: "#f59e0b",
+        tag: "Simple Process",
+        number: "04",
+    },
+    {
+        id: 5,
+        icon: "♾️",
+        title: "Lifetime Income",
+        description: "Earn best in industry commission on every transaction your retailer makes.",
+        frontGradient: "linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%)",
+        backGradient: "linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%)",
+        accent: "#0ea5e9",
+        tag: "Forever Earnings",
+        number: "05",
+    },
+];
+
+function BenefitFlipCard({ card, index }) {
+    const [flipped, setFlipped] = useState(false);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const t = setTimeout(() => setVisible(true), index * 150);
+        return () => clearTimeout(t);
+    }, [index]);
+
+    return (
+        <div
+            style={{
+                perspective: "1200px",
+                width: "100%",
+                height: "360px",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0) scale(1)" : "translateY(60px) scale(0.92)",
+                transition: `opacity 0.7s ease ${index * 0.1}s, transform 0.7s cubic-bezier(0.34,1.2,0.64,1) ${index * 0.1}s`,
+            }}
+            onMouseEnter={() => setFlipped(true)}
+            onMouseLeave={() => setFlipped(false)}
+        >
+            <div
+                style={{
+                    position: "relative",
+                    width: "100%",
+                    height: "100%",
+                    transformStyle: "preserve-3d",
+                    transition: "transform 0.75s cubic-bezier(0.4, 0, 0.2, 1)",
+                    transform: flipped ? "rotateX(180deg)" : "rotateX(0deg)",
+                }}
+            >
+                {/* FRONT */}
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                        borderRadius: "22px",
+                        background: card.frontGradient,
+                        border: `1px solid ${card.accent}33`,
+                        padding: "30px 24px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        overflow: "hidden",
+                    }}
+                >
+                    {/* Big number watermark */}
+                    <div style={{
+                        position: "absolute",
+                        bottom: "-10px",
+                        right: "16px",
+                        fontSize: "100px",
+                        fontWeight: "900",
+                        color: "rgba(0,0,0,0.03)",
+                        fontFamily: "sans-serif",
+                        lineHeight: 1,
+                        userSelect: "none",
+                    }}>{card.number}</div>
+
+                    {/* Glow circle top right */}
+                    <div style={{
+                        position: "absolute",
+                        top: "-40px", right: "-40px",
+                        width: "150px", height: "150px",
+                        borderRadius: "50%",
+                        background: card.accent,
+                        opacity: 0.12,
+                        filter: "blur(50px)",
+                        pointerEvents: "none",
+                    }} />
+
+                    <div>
+                        <div style={{
+                            display: "inline-block",
+                            background: card.accent + "22",
+                            border: `1px solid ${card.accent}55`,
+                            borderRadius: "20px",
+                            padding: "4px 14px",
+                            fontSize: "10px",
+                            fontWeight: "800",
+                            letterSpacing: "1.5px",
+                            textTransform: "uppercase",
+                            color: card.accent,
+                            marginBottom: "18px",
+                            fontFamily: "sans-serif",
+                        }}>{card.tag}</div>
+
+                        <div style={{
+                            width: "50px", height: "50px",
+                            borderRadius: "16px",
+                            background: card.accent + "22",
+                            border: `1px solid ${card.accent}44`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "22px",
+                            marginBottom: "18px",
+                        }}>{card.icon}</div>
+
+                        <h3 style={{
+                            fontSize: "18px",
+                            fontWeight: "800",
+                            color: "#0f172a",
+                            margin: "0 0 10px",
+                            fontFamily: "'Inter', sans-serif",
+                            lineHeight: "1.3",
+                        }}>{card.title}</h3>
+
+                        <p style={{
+                            fontSize: "13px",
+                            color: "#475569",
+                            lineHeight: "1.6",
+                            margin: 0,
+                            fontFamily: "sans-serif",
+                        }}>{card.description.slice(0, 95)}...</p>
+                    </div>
+
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        color: card.accent,
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        fontFamily: "sans-serif",
+                    }}>
+                        <span>Hover to flip</span>
+                        <span style={{ fontSize: "16px" }}>↕</span>
+                    </div>
+                </div>
+
+                {/* BACK */}
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                        transform: "rotateX(180deg)",
+                        borderRadius: "22px",
+                        background: card.backGradient,
+                        border: `1px solid ${card.accent}55`,
+                        padding: "30px 24px",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        overflow: "hidden",
+                        boxShadow: `0 0 40px ${card.accent}44, inset 0 1px 0 rgba(255,255,255,0.1)`,
+                    }}
+                >
+                    {/* Shine overlay */}
+                    <div style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%)",
+                        borderRadius: "22px",
+                        pointerEvents: "none",
+                    }} />
+
+                    {/* Glow */}
+                    <div style={{
+                        position: "absolute",
+                        bottom: "-40px", left: "-40px",
+                        width: "200px", height: "200px",
+                        borderRadius: "50%",
+                        background: card.accent,
+                        opacity: 0.2,
+                        filter: "blur(60px)",
+                        pointerEvents: "none",
+                    }} />
+
+                    <div style={{
+                        width: "44px", height: "44px",
+                        borderRadius: "14px",
+                        background: "rgba(255,255,255,0.15)",
+                        border: "1px solid rgba(255,255,255,0.25)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "20px",
+                        marginBottom: "16px",
+                    }}>{card.icon}</div>
+
+                    <div style={{ flex: 1 }}>
+                        <h3 style={{
+                            fontSize: "17px",
+                            fontWeight: "900",
+                            color: "#0f172a",
+                            margin: "0 0 10px",
+                            fontFamily: "'Inter', sans-serif",
+                        }}>{card.title}</h3>
+
+                        <p style={{
+                            fontSize: "13px",
+                            color: "#475569",
+                            lineHeight: "1.7",
+                            margin: 0,
+                            fontFamily: "sans-serif",
+                        }}>{card.description}</p>
+                    </div>
+
+                    <div style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "16px"
+                    }}>
+                        <button style={{
+                            flex: 1,
+                            padding: "10px 0",
+                            background: card.accent,
+                            border: "none",
+                            borderRadius: "10px",
+                            color: "white",
+                            fontWeight: "700",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            fontFamily: "sans-serif",
+                        }}>Start Now →</button>
+                        <button style={{
+                            flex: 1,
+                            padding: "10px 0",
+                            background: "transparent",
+                            border: `1px solid rgba(0,0,0,0.1)`,
+                            borderRadius: "10px",
+                            color: "#0f172a",
+                            fontWeight: "800",
+                            fontSize: "12px",
+                            cursor: "pointer",
+                            fontFamily: "sans-serif",
+                        }}>Learn More</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PartnershipBenefitsSection() {
+    const [mouse, setMouse] = useState({ x: -999, y: -999 });
+    const [mounted, setMounted] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => setMounted(true), []);
+
+    const handleMouseMove = (e) => {
+        // Only update spotlight if not on very slow device, but for now just use it directly
+        setMouse({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseLeave = () => {
+        setMouse({ x: -999, y: -999 });
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                background: "#05060f", // Dark cinematic background for contrast
+                padding: "100px 24px 100px",
+                position: "relative",
+                overflow: "hidden",
+            }}
+        >
+            <style>{`
+        @keyframes badgePulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.15); }
+          50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+        }
+        @keyframes titleShine {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+      `}</style>
+
+            {/* Mouse spotlight */}
+            <div
+                style={{
+                    position: "fixed",
+                    left: mouse.x,
+                    top: mouse.y,
+                    width: "500px",
+                    height: "500px",
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0)",
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                    transition: "left 0.1s, top 0.1s",
+                }}
+            />
+
+            {/* Content */}
+            <div style={{ position: "relative", zIndex: 1, maxWidth: "1250px", margin: "0 auto" }}>
+                {/* Header */}
+                <div
+                    style={{
+                        textAlign: "center",
+                        marginBottom: "70px",
+                        opacity: mounted ? 1 : 0,
+                        transform: mounted ? "translateY(0)" : "translateY(-24px)",
+                        transition: "all 0.9s ease",
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "inline-block",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: "30px",
+                            padding: "6px 22px",
+                            color: "rgba(255,255,255,0.7)",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                            letterSpacing: "3px",
+                            textTransform: "uppercase",
+                            fontFamily: "Inter, sans-serif",
+                            marginBottom: "24px",
+                            animation: "badgePulse 2.5s ease-in-out infinite",
+                        }}
+                    >
+                        ✦ Opportunities
+                    </div>
+
+                    <h2
+                        style={{
+                            fontSize: "clamp(36px, 5vw, 56px)",
+                            fontWeight: "900",
+                            margin: "0 0 20px",
+                            fontFamily: "'Inter', sans-serif",
+                            color: "white",
+                            lineHeight: "1.15",
+                            letterSpacing: "-1px"
+                        }}
+                    >
+                        Partnership{" "}
+                        <span
+                            style={{
+                                background: "linear-gradient(90deg, #e94560, #f72585, #7b2d8b, #533483, #00b4d8, #52b788, #fcbf49, #e94560)",
+                                backgroundSize: "300% 100%",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                backgroundClip: "text",
+                                animation: "titleShine 6s linear infinite",
+                            }}
+                        >
+                            Benefits
+                        </span>
+                    </h2>
+
+                    <p
+                        style={{
+                            color: "rgba(255,255,255,0.5)",
+                            fontSize: "17px",
+                            maxWidth: "540px",
+                            margin: "0 auto",
+                            lineHeight: "1.75",
+                            fontFamily: "Inter, sans-serif",
+                        }}
+                    >
+                        Join our growing network and unlock financial services — all from a single platform.
+                    </p>
+
+                    <div
+                        style={{
+                            width: mounted ? "80px" : "0",
+                            height: "4px",
+                            borderRadius: "4px",
+                            background: "linear-gradient(90deg, #e94560, #00b4d8)",
+                            margin: "32px auto 0",
+                            transition: "width 1s ease 0.6s",
+                        }}
+                    />
+                </div>
+
+                {/* Cards Grid */}
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                        gap: "24px",
+                    }}
+                >
+                    {benefits.map((card, i) => (
+                        <BenefitFlipCard key={card.id} card={card} index={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 /* ─────────────────────────────────────────────
    Enhanced in-view hook for scroll animations
@@ -212,17 +821,24 @@ const About = () => {
         offset: ["start end", "end start"]
     });
 
-    // Transforms for Mission Card (shrinks and slides up)
-    const missionScale = useTransform(scrollYProgress, [0.2, 0.4], [1, 0.85]);
-    const missionY = useTransform(scrollYProgress, [0.2, 0.4], [0, -80]);
-    const missionOpacity = useTransform(scrollYProgress, [0.2, 0.38], [1, 0]);
-    const missionBlur = useTransform(scrollYProgress, [0.2, 0.4], ["blur(0px)", "blur(10px)"]);
+    // Apply Spring physics for buttery smoothness
+    const smoothProgress = useSpring(scrollYProgress, {
+        stiffness: 80,
+        damping: 20,
+        restDelta: 0.001
+    });
+
+    // Transforms for Mission Card (shrinks and slides up) with smoother, wider ranges
+    const missionScale = useTransform(smoothProgress, [0.15, 0.45], [1, 0.85]);
+    const missionY = useTransform(smoothProgress, [0.15, 0.45], [0, -100]);
+    const missionOpacity = useTransform(smoothProgress, [0.15, 0.45], [1, 0]);
+    const missionBlur = useTransform(smoothProgress, [0.15, 0.45], ["blur(0px)", "blur(15px)"]);
 
     // Transforms for Vision Card (comes into focus)
-    const visionScale = useTransform(scrollYProgress, [0.2, 0.45], [0.9, 1]);
-    const visionY = useTransform(scrollYProgress, [0.2, 0.45], [50, 0]);
-    const visionOpacity = useTransform(scrollYProgress, [0.2, 0.4], [0, 1]);
-    const visionBlur = useTransform(scrollYProgress, [0.2, 0.4], ["blur(10px)", "blur(0px)"]);
+    const visionScale = useTransform(smoothProgress, [0.15, 0.5], [0.85, 1]);
+    const visionY = useTransform(smoothProgress, [0.15, 0.5], [80, 0]);
+    const visionOpacity = useTransform(smoothProgress, [0.15, 0.45], [0, 1]);
+    const visionBlur = useTransform(smoothProgress, [0.15, 0.5], ["blur(15px)", "blur(0px)"]);
 
     // Scroll container ref for Benefits
     const benefitsContainerRef = useRef(null);
@@ -261,6 +877,7 @@ const About = () => {
                     <div className="rp-nav__links">
                         <button className="rp-nav__link" onClick={() => navigate('/')}>Home</button>
                         <button className="rp-nav__link active" onClick={() => { setView('hero'); navigate('/about'); }}>About</button>
+                        <button className="rp-nav__link" onClick={() => navigate('/leadership')}>Our Leadership</button>
                         <button className="rp-nav__link" onClick={() => navigate('/contact')}>Contact</button>
                         <button className="rp-btn rp-btn--sm rp-btn--primary" onClick={() => navigate('/portal')}>Login</button>
                     </div>
@@ -396,89 +1013,99 @@ const About = () => {
                 </div>
             </section>
 
-            {/* 🌟 Partner Benefits - Horizontal Cinematic Scroll */}
-            {/* 🌟 Partner Benefits - Cinematic Horizontal Unlock */}
-            <section className="benefits-parallax-outer" ref={benefitsContainerRef} style={{ height: '4500px', background: '#fff' }}>
-                <div className="benefits-parallax-sticky">
-                    <div className="benefits-section-bg"></div>
-                    <div className="about_container_lock">
-                        <div className="section-header-center" style={{ marginBottom: '40px' }}>
-                            <span className="section-label">Opportunities</span>
-                            <h2 className="section-title-dissolve">Why Partner with Us?</h2>
-                        </div>
+            {/* 🌟 Core Values Section */}
+            <section className="values-section">
+                <div className="about-container">
+                    <div className="section-header-center" style={{ marginBottom: '60px' }}>
+                        <span className="section-label" style={{ color: '#4f6ef7', letterSpacing: '4px', textTransform: 'uppercase', fontWeight: '800', background: 'rgba(79, 110, 247, 0.1)', padding: '8px 16px', borderRadius: '30px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>✨ Our Values</span>
+                        <h2 className="section-title-dissolve" style={{ fontSize: '3.2rem', fontWeight: '900', color: '#1a1f36', marginTop: '20px', fontFamily: "'Inter', sans-serif", letterSpacing: '-1.5px' }}>
+                            Principles That <span style={{ color: '#4f6ef7' }}>Guide Us</span>
+                        </h2>
+                        <p className="about-sub-plain" style={{ margin: '20px auto 0', textAlign: 'center', fontSize: '1.2rem', color: '#6b7280', maxWidth: '650px', lineHeight: '1.8' }}>
+                            At <strong style={{ color: '#1a1f36' }}>Rupiksha</strong>, our core values shape everything we do – from product development to customer service. We believe in building a foundation of trust.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Interactive Slider Implementation */}
+                <div className="values-slider-wrapper">
+                    <div className="values-slider">
+                        {/* Render multiple sets for seamless infinite loop regardless of screen width */}
+                        {[...Array(4)].map((_, setIdx) => (
+                            <React.Fragment key={setIdx}>
+                                <FlipCard card={{
+                                    icon: "❤️",
+                                    title: "Customer First",
+                                    description: "We place our customers at the center of everything we do, striving to exceed expectations at every touchpoint.",
+                                    previewBg: "#f0f4ff",
+                                    accentColor: "#4f6ef7",
+                                    backBg: "#1a1f36",
+                                    logo: "Rupiksha"
+                                }} />
+
+                                <FlipCard card={{
+                                    icon: "💡",
+                                    title: "Innovation",
+                                    description: "We constantly explore new technologies and approaches to solve complex problems and deliver cutting-edge solutions.",
+                                    previewBg: "#fff4f0",
+                                    accentColor: "#f76f4f",
+                                    backBg: "#1a2a36",
+                                    logo: "Rupiksha"
+                                }} />
+
+                                <FlipCard card={{
+                                    icon: "🤝",
+                                    title: "Integrity",
+                                    description: "We operate with transparency, honesty, and ethical conduct in all our business practices and relationships.",
+                                    previewBg: "#f0fff4",
+                                    accentColor: "#4fb87f",
+                                    backBg: "#1a3628",
+                                    logo: "Rupiksha"
+                                }} />
+
+                                <FlipCard card={{
+                                    icon: "🏆",
+                                    title: "Excellence",
+                                    description: "We pursue the highest standards of quality and performance in everything we deliver to our partners and customers.",
+                                    previewBg: "#f4f0ff",
+                                    accentColor: "#8b4ff7",
+                                    backBg: "#2a1a36",
+                                    logo: "Rupiksha"
+                                }} />
+
+                                <FlipCard card={{
+                                    icon: "🌍",
+                                    title: "Inclusivity",
+                                    description: "We are committed to creating products and services that are accessible to all, regardless of location or background.",
+                                    previewBg: "#fff0f8",
+                                    accentColor: "#f74fa1",
+                                    backBg: "#361a29",
+                                    logo: "Rupiksha"
+                                }} />
+
+                                <FlipCard card={{
+                                    icon: "👥",
+                                    title: "Collaboration",
+                                    description: "We believe in the power of partnerships and collaborative efforts to drive positive change in the financial ecosystem.",
+                                    previewBg: "#f0fdf4",
+                                    accentColor: "#4fa8f7",
+                                    backBg: "#1a2a36",
+                                    logo: "Rupiksha"
+                                }} />
+                            </React.Fragment>
+                        ))}
                     </div>
 
-                    <div className="carousel_viewport">
-                        {[
-                            { i: <Smartphone size={32} />, t: 'Instant Setup', d: 'Launch your digital storefront in less than 2 minutes using our cloud-native app.' },
-                            { i: <Building2 size={32} />, t: 'Service Hub', d: 'One-stop shop for AEPS, BBPS, Travel, Insurance and Govt. documentation.' },
-                            { i: <Wallet size={32} />, t: 'Passive Income', d: 'Earn attractive commissions (₹40k-₹60k/mo) on every transaction.' },
-                            { i: <Shield size={32} />, t: 'Bank Security', d: 'Certified secure infrastructure ensured by RBI & NPCI compliance standards.' },
-                            { i: <Infinity size={32} />, t: 'Lifetime Payouts', d: 'Secure your future with lifetime commissions on your merchant network activity.' },
-                            { i: <Headset size={32} />, t: '24/7 Support', d: 'Dedicated relationship managers and round-the-clock technical assistance.' }
-                        ].map((b, i, arr) => {
-                            const count = arr.length;
-                            const step = 1 / count;
-
-                            // Precise control over 0-1 scroll range for each card
-                            const start = i * step;
-                            const centerStart = start + (step * 0.15); // Card reaches center
-                            const centerEnd = start + (step * 0.85);   // Card starts leaving center
-                            const end = (i + 1) * step;
-
-                            // X-Position: Right -> Center (Stays) -> Left
-                            const x = useTransform(benefitsProgress, [start, centerStart, centerEnd, end], ["120%", "0%", "0%", "-120%"]);
-
-                            // Scale: Active center card is slightly larger
-                            const scale = useTransform(benefitsProgress, [start, centerStart, centerEnd, end], [0.8, 1.05, 1.05, 0.8]);
-
-                            // Opacity: Fade in/out
-                            const opacity = useTransform(benefitsProgress, [start - 0.02, start, end, end + 0.02], [0, 1, 1, 0]);
-
-                            // Blur & Tint: Full effect on sides, clear in center
-                            const blur = useTransform(benefitsProgress, [start, centerStart, centerEnd, end], ["blur(15px)", "blur(0px)", "blur(0px)", "blur(15px)"]);
-                            const blueTint = useTransform(benefitsProgress, [start, centerStart, centerEnd, end], [0.85, 0, 0, 0.85]);
-
-                            return (
-                                <motion.div
-                                    key={i}
-                                    className="benefit-card-v5"
-                                    style={{
-                                        x,
-                                        scale,
-                                        opacity,
-                                        filter: blur,
-                                        '--blue-overlay': blueTint,
-                                        '--accent-color': benefitColors[i].main,
-                                        '--bg-color': benefitColors[i].bg,
-                                        '--glow-color': benefitColors[i].glow,
-                                        zIndex: 10
-                                    }}
-                                >
-                                    <div className="card-blue-screen"></div>
-                                    <div className="v5-icon-box">{b.i}</div>
-                                    <div className="v5-text-box">
-                                        <h4>{b.t}</h4>
-                                        <p>{b.d}</p>
-                                    </div>
-                                    <div className="benefit-card-arrow">
-                                        <ArrowLeft size={20} style={{ transform: 'rotate(180deg)' }} />
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
+                    <div className="slider-hint">
+                        <span className="drag-indicator">← Swipe or drag to explore →</span>
                     </div>
                 </div>
             </section>
 
-            <footer className="about-footer-simple">
-                <div className="about-container">
-                    <div className="footer-flex">
-                        <img src={logo} alt="Rupiksha" />
-                        <p>© 2026 RuPiKsha Digital Services. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            {/* 🌟 Partnership Benefits Section - Upgraded Dark Animated Version */}
+            <PartnershipBenefitsSection />
+
+            <Footer />
         </div >
     );
 };
@@ -707,7 +1334,7 @@ const ABOUT_CSS = `
     max-width: 800px;
     margin: 0 auto;
     position: relative;
-    height: 480px; /* Further reduced height to remove bottom space */
+    height: 320px; /* Reduced further to strictly hug the cards and remove bottom gap */
 }
 
 .mv-sticky-wrapper {
@@ -959,6 +1586,66 @@ const ABOUT_CSS = `
   animation: partnersGlowShine 6s linear infinite;
 }
 @keyframes partnersGlowShine { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+/* 🌟 Values Section (Slider) */
+.values-section { padding: 20px 0 100px; background: linear-gradient(135deg, #f8f9ff 0%, #fff8f2 100%); overflow-x: hidden; }
+.values-slider-wrapper { 
+    width: 100%; 
+    position: relative; 
+    overflow: hidden;
+    padding: 20px 0 60px;
+}
+.values-slider-wrapper::before, .values-slider-wrapper::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 15vw;
+    z-index: 2;
+    pointer-events: none;
+}
+.values-slider-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, #f8f9ff, transparent);
+}
+.values-slider-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, #fff8f2, transparent);
+}
+
+.values-slider { 
+    display: flex; 
+    gap: 30px; 
+    width: max-content;
+    animation: infiniteScrollMarquee 35s linear infinite;
+}
+.values-slider:hover {
+    animation-play-state: paused;
+}
+
+@keyframes infiniteScrollMarquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-2100px); }
+}
+
+.slider-hint { text-align: center; margin-top: 10px; opacity: 0.6; }
+.drag-indicator { font-size: 0.9rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 2px; }
+
+/* 🌟 Partnership Benefits Section */
+.partnership-benefits-section { padding: 100px 0; }
+.partner-benefits-list { display: flex; flex-direction: column; gap: 24px; max-width: 900px; margin: 0 auto; }
+.pb-card { background: #fff; padding: 30px 40px; border-radius: 24px; display: flex; align-items: center; gap: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; transition: all 0.3s; }
+.pb-card:hover { transform: translateX(10px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); border-color: #e2e8f0; border-left: 6px solid var(--accent); }
+.pb-icon { flex-shrink: 0; width: 80px; height: 80px; background: #ecfdf5; color: #059669; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
+.pb-text h4 { font-size: 1.4rem; font-weight: 800; color: var(--dark); margin-bottom: 10px; }
+.pb-text p { font-size: 1.1rem; color: #64748b; line-height: 1.6; margin: 0; }
+
+@media (max-width: 768px) {
+    .values-slider { padding: 20px 20px 40px; }
+    .value-card-slide { width: 280px; }
+    .pb-card { flex-direction: column; text-align: center; padding: 30px; gap: 20px; }
+    .pb-card:hover { transform: translateY(-5px); border-left: 1px solid #e2e8f0; border-top: 6px solid var(--accent); }
+}
 `;
 
 export default About;

@@ -70,24 +70,10 @@ const Distributors = () => {
             const sa = sharedDataService.getCurrentSuperAdmin();
             const newDist = sharedDataService.registerDistributor({
                 ...addForm,
-                status: 'Approved'
+                status: 'Pending'
             }, sa ? sa.id : null);
 
             if (newDist) {
-                const creds = {
-                    to: addForm.email,
-                    name: addForm.name,
-                    loginId: addForm.mobile, // Using mobile as Login ID
-                    password: addForm.password,
-                    addedBy: sa ? `Super Admin: ${sa.name}` : 'Super Admin',
-                    portalType: 'Distributor'
-                };
-
-                // Send Credentials Email
-                const emailModule = await import('../../services/emailService');
-                await emailModule.sendCredentialsEmail(creds);
-
-                setCreatedCredentials(creds);
                 setShowSuccessView(true);
                 loadData();
                 setIsAddModalOpen(false);

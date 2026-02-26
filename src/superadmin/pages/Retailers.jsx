@@ -77,7 +77,7 @@ const Retailers = () => {
         setVerifying(true);
         try {
             const sa = sharedDataService.getCurrentSuperAdmin();
-            const newUser = dataService.registerUser(formData, sa ? sa.id : 'SUPERADMIN');
+            const newUser = await dataService.registerUser(formData, sa ? sa.id : 'SUPERADMIN');
 
             const creds = {
                 to: formData.email,
@@ -126,9 +126,11 @@ const Retailers = () => {
                     </button>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-colors flex items-center gap-2"
+                        className="group relative bg-[#1e40af] hover:bg-[#1d4ed8] text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-3 overflow-hidden"
                     >
-                        <UserPlus size={14} /> Provision Retailer
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        <UserPlus size={16} className="text-blue-200" />
+                        <span>Add New Retailer</span>
                     </button>
                 </div>
             </div>
@@ -237,6 +239,18 @@ const Retailers = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Floating Action Symbol for Add Retailer */}
+            <button
+                onClick={() => setShowAddModal(true)}
+                className="fixed bottom-8 right-8 z-[60] bg-[#1e40af] text-white p-5 rounded-full shadow-[0_15px_40px_rgba(30,64,175,0.4)] hover:scale-110 active:scale-95 transition-all group lg:hidden"
+                title="Add New Retailer"
+            >
+                <UserPlus size={28} />
+                <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    Add New Retailer
+                </span>
+            </button>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

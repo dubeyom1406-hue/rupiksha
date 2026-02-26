@@ -13,6 +13,7 @@ import logo from './assets/rupiksha_logo.png';
 import { dataService, BACKEND_URL } from './services/dataService';
 import DistributorLogin from './distributor/components/DistributorLogin';
 import SuperAdminLogin from './superadmin/components/SuperAdminLogin';
+import RetailerLogin from './retailer/components/RetailerLogin';
 
 const INDIAN_STATES = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
@@ -147,13 +148,12 @@ const Login = () => {
     const [loginMethod, setLoginMethod] = useState('password'); // 'password', 'otp'
     const [enteredOtp, setEnteredOtp] = useState('');
     const [tempUser, setTempUser] = useState(null);
-    const [captcha, setCaptcha] = useState('rx h');
     const [currentSlide, setCurrentSlide] = useState(0);
 
     // Form States
-    const [loginForm, setLoginForm] = useState({ username: '', password: '', captcha: '' });
+    const [loginForm, setLoginForm] = useState({ username: '', password: '' });
     // Initialize registerForm lang with global lang
-    const [registerForm, setRegisterForm] = useState({ name: '', mobile: '', email: '', state: '', lang: lang === 'en' ? 'English' : 'Hindi', captcha: '', agreement: false });
+    const [registerForm, setRegisterForm] = useState({ name: '', mobile: '', email: '', state: '', role: 'RETAILER', lang: lang === 'en' ? 'English' : 'Hindi', agreement: false });
     const [forgotForm, setForgotForm] = useState({ mobile: '', dob: '' });
 
     // Update register form when global lang changes
@@ -263,7 +263,7 @@ const Login = () => {
                 const res = await fetch(`${BACKEND_URL}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(registerForm)
+                    body: JSON.stringify({ ...registerForm, role: registerForm.role || 'RETAILER' })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -285,15 +285,6 @@ const Login = () => {
         }
     };
 
-    const refreshCaptcha = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        let result = '';
-        for (let i = 0; i < 4; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-            if (i === 1) result += ' ';
-        }
-        setCaptcha(result);
-    };
 
     // -- Portal Selection Screen --------------------------------------------
     if (portal === 'select') {
@@ -542,12 +533,12 @@ const Login = () => {
                     {/* Left: SuperAdmin Login */}
                     <div className="w-full md:w-[45%] lg:w-[40%] p-6 md:p-12 flex flex-col items-center justify-center bg-white overflow-y-auto">
                         <div className="w-full max-w-[440px] space-y-6">
-                            <h2 className="text-indigo-600 text-2xl md:text-3xl font-black text-center tracking-tighter uppercase">
-                                SUPER ADMIN LOGIN
+                            <h2 className="text-[#312e81] text-2xl md:text-3xl font-black text-center tracking-tighter uppercase italic">
+                                MASTER PORTAL LOGIN
                             </h2>
-                            <div className="bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
-                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
-                                    System Control — Super Distributor Access
+                            <div className="bg-white rounded-[2rem] shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
+                                <div className="bg-gradient-to-r from-[#312e81] to-[#4338ca] text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
+                                    System Control — Master Node Access
                                 </div>
                                 <div className="p-8">
                                     <SuperAdminLogin />
@@ -596,11 +587,12 @@ const Login = () => {
         );
     }
 
+    // -- Retailer Portal (Default / portal === 'retailer') ----------------------
     return (
         <div className="min-h-screen bg-[#f8fafc] flex flex-col font-['Montserrat',sans-serif]">
-            {/* Header — same style as Distributor portal */}
+            {/* Header — similar style to other portals */}
             <header className="bg-white px-4 md:px-8 py-2 flex items-center justify-between shadow-sm border-b border-slate-100 sticky top-0 z-50">
-                <div className="flex flex-col items-center cursor-pointer" onClick={() => setView('login')}>
+                <div className="flex flex-col items-center cursor-pointer" onClick={() => setPortal('select')}>
                     <img src={logo} alt="RUPIKSHA" className="h-10 md:h-12 object-contain" />
                     <span className="text-[8px] font-bold text-slate-400 -mt-1 uppercase tracking-tighter self-start">Making Life Simple</span>
                 </div>
@@ -616,278 +608,24 @@ const Login = () => {
             </header>
 
             <main className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
-                {/* Left: Retailer Login Card */}
+                {/* Left: Retailer Login */}
                 <div className="w-full md:w-[45%] lg:w-[40%] p-6 md:p-12 flex flex-col items-center justify-center bg-white overflow-y-auto">
                     <div className="w-full max-w-[440px] space-y-6">
-                        <h2 className="text-[#1e40af] text-2xl md:text-3xl font-black text-center tracking-tighter uppercase">
+                        <h2 className="text-[#1e40af] text-2xl md:text-3xl font-black text-center tracking-tighter uppercase italic">
                             RETAILER LOGIN
                         </h2>
-                        <div className="bg-white rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-[#1e40af] to-[#3b82f6] text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
-                                {view === 'login' ? 'A Panel — Retailer Access' :
-                                    view === 'register' ? t('create_account_title') : t('forgot_password')}
+                        <div className="bg-white rounded-[2rem] shadow-[0_15px_40px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white text-center py-2.5 font-bold uppercase tracking-widest text-sm">
+                                A Panel — Retailer Access
                             </div>
-
-                            <AnimatePresence mode="wait">
-                                {view === 'login' ? (
-                                    <motion.form
-                                        key="login"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        onSubmit={handleAction}
-                                        className="p-8 space-y-5"
-                                    >
-                                        {/* Login Method Toggle */}
-                                        <div className="flex bg-slate-100 p-1 rounded-lg">
-                                            <button type="button" onClick={() => setLoginMethod('password')}
-                                                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded transition-all ${loginMethod === 'password' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                {t('login_by_password')}
-                                            </button>
-                                            <button type="button" onClick={() => setLoginMethod('otp')}
-                                                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded transition-all ${loginMethod === 'otp' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                {t('login_by_otp')}
-                                            </button>
-                                        </div>
-
-                                        {loginStep === 'otp' ? (
-                                            <div className="space-y-4">
-                                                <div className="text-center">
-                                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{t('otp_sent')}</p>
-                                                    <p className="text-sm font-black text-blue-600 mt-1">{tempUser?.mobile || loginForm.username}</p>
-                                                </div>
-                                                <div className="relative">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center text-slate-400 border-r border-slate-200 bg-slate-50 rounded-l-md">
-                                                        <Lock size={18} />
-                                                    </div>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={t('otp_placeholder')}
-                                                        className="w-full pl-14 pr-4 py-3.5 bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm font-bold tracking-[0.5em] text-center"
-                                                        value={enteredOtp}
-                                                        onChange={(e) => setEnteredOtp(e.target.value)}
-                                                        maxLength={6}
-                                                        required
-                                                    />
-                                                </div>
-                                                <button type="submit" disabled={isLoading}
-                                                    className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:opacity-90 text-white font-black py-3.5 rounded-full text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-60"
-                                                >
-                                                    {isLoading
-                                                        ? <><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full inline-block" /> Verifying...</>
-                                                        : <><span>{t('verify_otp_btn')}</span><ArrowRight size={16} /></>
-                                                    }
-                                                </button>
-                                                <button type="button" onClick={() => { setLoginStep('credentials'); setEnteredOtp(''); }}
-                                                    className="w-full text-center text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase tracking-wider">
-                                                    ? {t('back_to_login')}
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="relative">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center text-slate-400 border-r border-slate-200 bg-slate-50 rounded-l-md">
-                                                        <Smartphone size={18} />
-                                                    </div>
-                                                    <input type="text" placeholder={t('mobile_placeholder')}
-                                                        className="w-full pl-14 pr-4 py-3.5 bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium"
-                                                        value={loginForm.username}
-                                                        onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                {loginMethod === 'password' && (
-                                                    <>
-                                                        <div className="relative">
-                                                            <input type={showPassword ? 'text' : 'password'}
-                                                                placeholder={t('password_placeholder')}
-                                                                className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium"
-                                                                value={loginForm.password}
-                                                                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                                                                required
-                                                            />
-                                                            <button type="button" onClick={() => setShowPassword(!showPassword)}
-                                                                className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center text-slate-400 border-l border-slate-200 hover:text-blue-600 bg-slate-50 rounded-r-md">
-                                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                                            </button>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-3 items-center">
-                                                            <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded border border-slate-200">
-                                                                <span className="text-xl font-['Brush_Script_MT',cursive] italic tracking-widest text-slate-600 select-none flex-1 text-center line-through decoration-slate-400">
-                                                                    {captcha}
-                                                                </span>
-                                                                <button type="button" onClick={refreshCaptcha} className="text-slate-400 hover:text-blue-600 transition-transform hover:rotate-180 duration-500">
-                                                                    <RefreshCcw size={16} />
-                                                                </button>
-                                                            </div>
-                                                            <input type="text" placeholder={t('captcha_placeholder')}
-                                                                className="w-full px-3 py-3.5 border border-slate-300 rounded-md outline-none focus:border-blue-500 text-sm font-medium"
-                                                                onChange={(e) => setLoginForm({ ...loginForm, captcha: e.target.value })}
-                                                                required
-                                                            />
-                                                        </div>
-                                                    </>
-                                                )}
-
-                                                <button type="submit" disabled={isLoading}
-                                                    className="w-full bg-gradient-to-r from-[#1e40af] to-[#3b82f6] hover:opacity-90 text-white font-black py-3.5 rounded-full text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-60"
-                                                >
-                                                    {isLoading
-                                                        ? <><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full inline-block" /> Signing in...</>
-                                                        : <><span>{t('login_btn')}</span><ArrowRight size={16} /></>
-                                                    }
-                                                </button>
-                                            </>
-                                        )}
-
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1 h-px bg-slate-200" />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">OR</span>
-                                            <div className="flex-1 h-px bg-slate-200" />
-                                        </div>
-
-                                        <button type="button" onClick={() => setView('register')}
-                                            className="w-full border-2 border-blue-400 hover:bg-blue-50 text-blue-600 font-black py-3 rounded-full text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95">
-                                            <Users size={15} /> Create Free Account
-                                        </button>
-
-                                        <button type="button" onClick={() => setView('forgot')}
-                                            className="w-full text-center text-[10px] font-black text-slate-400 hover:text-slate-700 uppercase tracking-wider">
-                                            {t('forgot_password')}
-                                        </button>
-                                    </motion.form>
-                                ) : view === 'register' ? (
-                                    <motion.form
-                                        key="register"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        onSubmit={handleAction}
-                                        className="p-8 space-y-4"
-                                    >
-                                        <p className="text-[10px] text-slate-400 font-bold text-center uppercase tracking-wide">{t('register_p')}</p>
-
-                                        <div className="relative">
-                                            <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input type="text" placeholder={t('name_label')}
-                                                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium"
-                                                value={registerForm.name}
-                                                onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                                                required />
-                                        </div>
-                                        <div className="relative">
-                                            <Smartphone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input type="text" placeholder={t('mobile_label')}
-                                                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium"
-                                                value={registerForm.mobile}
-                                                onChange={(e) => setRegisterForm({ ...registerForm, mobile: e.target.value })}
-                                                required />
-                                        </div>
-                                        <div className="relative">
-                                            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input type="email" placeholder={t('email_label')}
-                                                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium"
-                                                value={registerForm.email}
-                                                onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                                                required />
-                                        </div>
-                                        <div className="relative">
-                                            <select
-                                                className={`w-full px-3 py-3 bg-white border border-slate-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium appearance-none ${!registerForm.state ? 'text-slate-400' : 'text-slate-900'}`}
-                                                value={registerForm.state}
-                                                onChange={(e) => setRegisterForm({ ...registerForm, state: e.target.value })}
-                                                required>
-                                                <option value="">{t('state_label')}</option>
-                                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3 items-center">
-                                            <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded border border-slate-200">
-                                                <span className="text-xl font-['Brush_Script_MT',cursive] italic tracking-widest text-slate-600 select-none flex-1 text-center line-through decoration-slate-400">
-                                                    {captcha}
-                                                </span>
-                                                <button type="button" onClick={refreshCaptcha} className="text-slate-400 hover:text-blue-600 transition-transform hover:rotate-180 duration-500">
-                                                    <RefreshCcw size={16} />
-                                                </button>
-                                            </div>
-                                            <input type="text" placeholder={t('captcha_placeholder')}
-                                                className="w-full px-3 py-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 text-sm font-medium"
-                                                onChange={(e) => setRegisterForm({ ...registerForm, captcha: e.target.value })}
-                                                required />
-                                        </div>
-
-                                        <label className="flex items-start gap-3 cursor-pointer">
-                                            <input type="checkbox"
-                                                className="w-4 h-4 mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                checked={registerForm.agreement}
-                                                onChange={(e) => setRegisterForm({ ...registerForm, agreement: e.target.checked })}
-                                                required />
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase leading-tight">{t('agreement')}</span>
-                                        </label>
-
-                                        <button type="submit" disabled={isLoading}
-                                            className="w-full bg-gradient-to-r from-[#1e40af] to-[#3b82f6] hover:opacity-90 text-white font-black py-3.5 rounded-full text-[11px] uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60">
-                                            {isLoading
-                                                ? <><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full inline-block" />Submitting...</>
-                                                : <><Users size={14} /> {t('register_btn')}</>}
-                                        </button>
-                                        <button type="button" onClick={() => setView('login')}
-                                            className="w-full text-center text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider">
-                                            ? {t('already_registered')} {t('log_in_link')}
-                                        </button>
-                                    </motion.form>
-                                ) : (
-                                    <motion.form
-                                        key="forgot"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        onSubmit={handleAction}
-                                        className="p-8 space-y-5"
-                                    >
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">{t('mobile_label')}</label>
-                                            <input type="text" placeholder="Enter your registered mobile number"
-                                                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium"
-                                                value={forgotForm.mobile}
-                                                onChange={(e) => setForgotForm({ ...forgotForm, mobile: e.target.value })}
-                                                required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">{t('dob_label')}</label>
-                                            <div className="flex">
-                                                <div className="w-12 bg-slate-50 border border-r-0 border-slate-300 rounded-l-xl flex items-center justify-center text-slate-400">
-                                                    <Calendar size={16} />
-                                                </div>
-                                                <input type="text" placeholder="DD/MM/YYYY"
-                                                    className="flex-1 px-4 py-3 border border-slate-300 rounded-r-xl focus:border-blue-500 outline-none text-sm font-medium"
-                                                    value={forgotForm.dob}
-                                                    onChange={(e) => setForgotForm({ ...forgotForm, dob: e.target.value })}
-                                                    required />
-                                            </div>
-                                            <p className="text-[9px] font-bold mt-1.5 text-emerald-600 italic">{t('dob_note')}</p>
-                                        </div>
-                                        <button type="submit" disabled={isLoading}
-                                            className="w-full bg-gradient-to-r from-[#1e40af] to-[#3b82f6] hover:opacity-90 text-white font-black py-3.5 rounded-full text-[11px] uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60">
-                                            {t('submit_btn')} <ArrowRight size={14} />
-                                        </button>
-                                        <button type="button" onClick={() => setView('login')}
-                                            className="w-full text-center text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-wider">
-                                            ? {t('back_to_login')}
-                                        </button>
-                                    </motion.form>
-                                )}
-                            </AnimatePresence>
+                            <div className="p-8">
+                                <RetailerLogin />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right: Retailer Promo Panel — mirrors exact Distributor right panel style */}
+                {/* Right: Retailer Promo Panel */}
                 <div className="hidden md:flex flex-1 bg-gradient-to-br from-[#0c1a3a] via-[#1e40af] to-[#0c1a3a] relative overflow-hidden items-center justify-center p-8 lg:p-14">
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/10 blur-[150px] rounded-full -mr-48 -mt-48" />
@@ -928,7 +666,7 @@ const Login = () => {
             {/* WhatsApp Float */}
             <a href="https://wa.me/919289309524" target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-[100] group">
                 <div className="absolute -top-14 right-0 bg-white text-[#1e40af] px-4 py-2 rounded-lg shadow-2xl text-[10px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 border border-slate-100 uppercase">
-                    {t('chat_with_us')}
+                    Chat with Us
                     <div className="absolute bottom-[-6px] right-6 w-3 h-3 bg-white rotate-45 border-r border-b border-slate-100" />
                 </div>
                 <div className="bg-[#25D366] text-white p-4 rounded-full shadow-[0_10px_30px_rgba(37,211,102,0.5)] hover:bg-[#128C7E] hover:scale-110 active:scale-90 transition-all relative flex items-center justify-center">
