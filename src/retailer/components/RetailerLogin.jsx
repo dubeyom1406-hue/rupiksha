@@ -85,7 +85,12 @@ const RetailerLogin = () => {
                     if (data.success) {
                         localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
-                        navigate('/retailer');
+                        const role = data.user.role;
+                        if (['NATIONAL_HEADER', 'STATE_HEADER', 'REGIONAL_HEADER'].includes(role)) {
+                            navigate('/header');
+                        } else {
+                            navigate('/retailer');
+                        }
                     } else {
                         setLoginError(data.message || 'Invalid OTP');
                     }
@@ -98,9 +103,15 @@ const RetailerLogin = () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        navigate('/retailer');
+                        localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                        localStorage.setItem('rupiksha_token', data.token); // Aligning with auth context
+
+                        const role = data.user.role;
+                        if (['NATIONAL_HEADER', 'STATE_HEADER', 'REGIONAL_HEADER'].includes(role)) {
+                            navigate('/admin'); // Header users use the admin layout which checks their role to show employee dashboard
+                        } else {
+                            navigate('/dashboard');
+                        }
                     } else {
                         setLoginError(data.message || 'Login failed');
                     }

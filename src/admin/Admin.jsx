@@ -15,23 +15,33 @@ import { sendApprovalEmail } from '../services/emailService';
 import mainLogo from '../assets/rupiksha_logo.png';
 import AdminPlanManager from './AdminPlanManager';
 import OurMap from '../superadmin/pages/OurMap';
+import LiveDashboard from './components/LiveDashboard';
+import EmployeeManager from './components/EmployeeManager';
+import { useAuth } from '../context/AuthContext';
 
 const Admin = () => {
     const navigate = useNavigate();
 
+    const { user: currentUser, loading } = useAuth();
+
     // ── Auth guard: redirect to AdminLogin if not authenticated ──
     useEffect(() => {
+        if (loading) return; // Wait until AuthContext has finished initializing
         const isAuth = sessionStorage.getItem('admin_auth');
-        if (!isAuth) {
+        const isHeader = currentUser && ['NATIONAL_HEADER', 'STATE_HEADER', 'REGIONAL_HEADER'].includes(currentUser.role);
+        if (!isAuth && !isHeader) {
             navigate('/admin-login', { replace: true });
         }
-    }, [navigate]);
+    }, [navigate, currentUser, loading]);
 
     const [data, setData] = useState(dataService.getData());
     const [distributors, setDistributors] = useState([]);
     const [superadmins, setSuperadmins] = useState([]);
     const [trashUsers, setTrashUsers] = useState([]);
-    const [activeSection, setActiveSection] = useState('Approvals');
+
+    // Default to Dashboard for Header users since they might not have Approvals access
+    const initialSection = (currentUser && ['NATIONAL_HEADER', 'STATE_HEADER', 'REGIONAL_HEADER'].includes(currentUser.role)) ? 'Dashboard' : 'Approvals';
+    const [activeSection, setActiveSection] = useState(initialSection);
     const [expandedSA, setExpandedSA] = useState(null); // ID of expanded SuperAdmin row
     const [expandedNav, setExpandedNav] = useState(null); // which nav group is expanded
     const [status, setStatus] = useState(null);
@@ -361,7 +371,7 @@ const Admin = () => {
                         onChange={(e) => setData({ ...data, chartTitle: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-7 gap-4">
-                    {data.chartData.map((item, idx) => (
+                    {(data.chartData || []).map((item, idx) => (
                         <div key={idx} className="flex flex-col gap-2">
                             <span className="text-[10px] font-bold text-slate-400 text-center uppercase">{item.name}</span>
                             <input
@@ -382,7 +392,7 @@ const Admin = () => {
             <div className="p-6 bg-white rounded-2xl shadow-sm border border-slate-100">
                 <h3 className="font-bold text-slate-700 flex items-center gap-2 mb-6"><Zap size={18} className="text-emerald-500" /> Quick Action Cards</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {data.quickActions.map((action, idx) => (
+                    {(data.quickActions || []).map((action, idx) => (
                         <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                             <div className="flex gap-3">
                                 <label className="flex-1">
@@ -473,7 +483,7 @@ const Admin = () => {
 
     const ServicesEditor = () => (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-            {data.services.map((cat, catIdx) => (
+            {(data.services || []).map((cat, catIdx) => (
                 <div key={catIdx} className="p-6 bg-white rounded-2xl shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-6">
                         <input
@@ -550,7 +560,7 @@ const Admin = () => {
                     <Video size={22} className="text-blue-500" /> Training Content
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {data.promotions.banners.map((banner, idx) => (
+                    {(data.promotions?.banners || []).map((banner, idx) => (
                         <div key={idx} className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm relative group">
                             <ImageUpload
                                 label="Banner Image"
@@ -870,9 +880,9 @@ const Admin = () => {
     );
 
     const ApprovalsTable = () => {
-        const pendingUsers = (data.users || []).filter(u => u.status === 'Pending');
-        const pendingDists = (distributors || []).filter(d => d.status === 'Pending');
-        const pendingSAs = (superadmins || []).filter(s => s.status === 'Pending');
+        const pendingUsers = (data.users || []).filter(u => u?.status === 'Pending');
+        const pendingDists = (distributors || []).filter(d => d?.status === 'Pending');
+        const pendingSAs = (superadmins || []).filter(s => s?.status === 'Pending');
 
         return (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -1059,7 +1069,7 @@ const Admin = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {(data.users || []).map((user, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 transition-colors text-xs">
+                            user && <tr key={idx} className="hover:bg-slate-50 transition-colors text-xs">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
@@ -1768,8 +1778,8 @@ const Admin = () => {
     );
 
     const DistributorsTable = () => {
-        const pending = distributors.filter(d => d.status === 'Pending');
-        const approved = distributors.filter(d => d.status === 'Approved');
+        const pending = (distributors || []).filter(d => d?.status === 'Pending');
+        const approved = (distributors || []).filter(d => d?.status === 'Approved');
         return (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 {/* Pending Distributors */}
@@ -1994,6 +2004,8 @@ const Admin = () => {
                     {[
                         { id: 'Approvals', icon: CheckCircle2 },
                         { id: 'Dashboard', icon: LayoutDashboard },
+                        { id: 'EmployeeManager', icon: ShieldCheck, label: 'Employment' },
+                        { id: 'Landing Content', icon: FileText },
                         { id: 'Trash', icon: Trash2 },
                         { id: 'Services', icon: Package },
                         { id: 'Promotions', icon: Video },
@@ -2091,40 +2103,42 @@ const Admin = () => {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-                <header className="bg-white border-b border-slate-100 p-4 md:p-6 flex justify-between items-center sticky top-0 z-10">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setShowMobileSidebar(true)}
-                            className="p-2 hover:bg-slate-100 rounded-lg lg:hidden text-slate-600 transition-colors"
-                        >
-                            <LayoutDashboard size={24} />
-                        </button>
-                        <div>
-                            <h2 className="text-lg md:text-2xl font-bold text-slate-800 uppercase tracking-tight">{activeSection} Control</h2>
-                            <p className="hidden sm:block text-xs text-slate-400 font-medium">Manage all application data in real-time</p>
+            <div className={`flex-1 overflow-y-auto ${activeSection === 'Dashboard' ? 'bg-[#020817]' : 'bg-slate-50'}`}>
+                {activeSection !== 'Dashboard' && (
+                    <header className="bg-white border-b border-slate-100 p-4 md:p-6 flex justify-between items-center sticky top-0 z-10">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setShowMobileSidebar(true)}
+                                className="p-2 hover:bg-slate-100 rounded-lg lg:hidden text-slate-600 transition-colors"
+                            >
+                                <LayoutDashboard size={24} />
+                            </button>
+                            <div>
+                                <h2 className="text-lg md:text-2xl font-bold text-slate-800 uppercase tracking-tight">{activeSection} Control</h2>
+                                <p className="hidden sm:block text-xs text-slate-400 font-medium">Manage all application data in real-time</p>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 md:gap-4">
-                        <button
-                            onClick={handleReset}
-                            className="p-2 md:p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                            title="Reset to Defaults"
-                        >
-                            <RefreshCcw size={20} />
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="bg-slate-900 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl font-bold text-[10px] md:text-sm shadow-xl shadow-slate-900/20 flex items-center gap-2 hover:bg-slate-800 active:scale-95 transition-all"
-                        >
-                            <Save size={18} className="hidden sm:block" />
-                            Save
-                        </button>
-                    </div>
-                </header>
+                        <div className="flex items-center gap-2 md:gap-4">
+                            <button
+                                onClick={handleReset}
+                                className="p-2 md:p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                                title="Reset to Defaults"
+                            >
+                                <RefreshCcw size={20} />
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="bg-slate-900 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl font-bold text-[10px] md:text-sm shadow-xl shadow-slate-900/20 flex items-center gap-2 hover:bg-slate-800 active:scale-95 transition-all"
+                            >
+                                <Save size={18} className="hidden sm:block" />
+                                Save
+                            </button>
+                        </div>
+                    </header>
+                )}
 
-                <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+                <main className={activeSection === 'Dashboard' ? 'w-full min-h-full' : 'p-4 md:p-8 max-w-6xl mx-auto space-y-8'}>
                     {status && (
                         <div className={`p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                             {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
@@ -2133,7 +2147,9 @@ const Admin = () => {
                     )}
 
                     {activeSection === 'Approvals' && <ApprovalsTable />}
-                    {activeSection === 'Dashboard' && <DashboardEditor />}
+                    {activeSection === 'Dashboard' && <LiveDashboard data={data} distributors={distributors} superadmins={superadmins} />}
+                    {activeSection === 'EmployeeManager' && <EmployeeManager />}
+                    {activeSection === 'Landing Content' && <DashboardEditor />}
                     {activeSection === 'Trash' && <TrashTable />}
                     {activeSection === 'Stats' && <StatsEditor />}
                     {activeSection === 'Services' && <ServicesEditor />}
@@ -2198,7 +2214,7 @@ const Admin = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                            {superadmins.filter(s => s.status === 'Approved').map((sa, idx) => {
+                                            {(superadmins || []).filter(s => s?.status === 'Approved').map((sa, idx) => {
                                                 const distsUnder = distributors.filter(d => d.ownerId === sa.id);
                                                 const retailersDirect = (data.users || []).filter(u => u.ownerId === sa.id);
                                                 const retailersViaDist = (data.users || []).filter(u => {

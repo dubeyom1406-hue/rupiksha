@@ -1,4 +1,6 @@
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? '/api' : 'http://localhost:5001/api');
+import { sendOTPEmail, sendCredentialsEmail } from './emailService';
+
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 export const dataService = {
     // --- AUTH & LOGIN ---
@@ -85,7 +87,25 @@ export const dataService = {
 
         // Local fallback for testing
         const data = this.getData();
-        const user = data.users.find(u => (u.username === username || u.mobile === username) && u.password === password);
+        let user = data.users.find(u => (u.username === username || u.mobile === username) && u.password === password);
+
+        // Mock Headers if not found
+        if (!user && password === 'password123') {
+            if (username === 'nat_head') {
+                user = {
+                    id: 'EMP-001', username: 'nat_head', password: 'password123', name: 'Ravi Sharma', role: 'NATIONAL_HEADER', territory: 'India',
+                    mobile: '9876543210', email: 'ravi@rupiksha.com', address: 'Delhi, India', status: 'Approved',
+                    latitude: 28.6139, longitude: 77.2090, lastLogin: new Date().toISOString()
+                };
+            } else if (username === 'state_mh') {
+                user = {
+                    id: 'EMP-002', username: 'state_mh', password: 'password123', name: 'Ajit Patil', role: 'STATE_HEADER', territory: 'Maharashtra',
+                    mobile: '9876543211', email: 'ajit@rupiksha.com', address: 'Mumbai, MH', status: 'Approved',
+                    latitude: 19.0760, longitude: 72.8777, lastLogin: new Date().toISOString()
+                };
+            }
+        }
+
         if (user) {
             localStorage.setItem('rupiksha_user', JSON.stringify(user));
             return { success: true, user };
@@ -211,6 +231,39 @@ export const dataService = {
                     (e) => reject('Location access denied')
                 );
             }
+        });
+    },
+
+    generateOTP: function () {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    },
+
+    sendEmployeeVerificationOTP: async function (email, name) {
+        const otp = this.generateOTP();
+        const res = await sendOTPEmail(email, otp, name);
+        if (res.success) {
+            return { success: true, otp };
+        }
+        return res;
+    },
+
+    sendEmployeeLoginOTP: async function (email, name) {
+        const otp = this.generateOTP();
+        const res = await sendOTPEmail(email, otp, name);
+        if (res.success) {
+            return { success: true, otp };
+        }
+        return res;
+    },
+
+    sendEmployeeCredentials: async function (email, name, loginId, password, addedBy, role) {
+        return await sendCredentialsEmail({
+            to: email,
+            name: name,
+            loginId: loginId,
+            password: password,
+            addedBy: addedBy,
+            portalType: role
         });
     },
 
