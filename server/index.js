@@ -32,7 +32,29 @@ const transporter = nodemailer.createTransport({
 // Stateless OTP Store
 const otpStore = new Map();
 
-app.use(cors({ origin: "*" }));
+const allowedOrigins = [
+  'https://rupiksha.in',
+  'https://www.rupiksha.in',
+  'https://rupiksha.vercel.app',
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5008',
+  'http://127.0.0.1:5173',
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    // Allow any vercel.app subdomain
+    if (origin.includes('.vercel.app') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS: Not allowed — ' + origin));
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // --- In-Memory Data Store (Replaces Database) ---
