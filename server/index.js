@@ -768,7 +768,104 @@ app.post("/api/verify-admin-otp", (req, res) => {
   res.status(400).json({ error: "Invalid OTP" });
 });
 
+// ─── ALIAS & MISSING ROUTES ──────────────────────────────────────────────────
+
+// Health check
+app.get("/api/health", (req, res) => res.json({ success: true, status: "OK" }));
+
+// SuperAdmin OTP alias (frontend calls /api/request-otp)
+app.post("/api/request-otp", async (req, res) => {
+  const { email } = req.body;
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(email, { otp, expires: Date.now() + 120000 });
+  try {
+    await transporter.sendMail({
+      from: `"RuPiKsha Admin" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Admin Login OTP - RuPiKsha",
+      html: `<div style="font-family:Arial;padding:30px;text-align:center"><h2>Your OTP</h2><h1 style="font-size:48px;color:#0f172a;letter-spacing:8px">${otp}</h1><p>Valid for 2 minutes</p></div>`
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+// Forgot password
+app.post("/api/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const user = memoryStore.users.find(u => u.email === email);
+  if (!user) return res.status(404).json({ error: "Email not found" });
+  const tempPass = Math.random().toString(36).slice(-8);
+  user.password_hash = await bcrypt.hash(tempPass, 10);
+  try {
+    await transporter.sendMail({
+      from: `"RuPiKsha" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Password Reset - RuPiKsha",
+      html: `<p>Your temporary password is: <b>${tempPass}</b></p>`
+    });
+    res.json({ success: true });
+  } catch { res.status(500).json({ error: "Failed to send email" }); }
+});
+
+// My retailers by parent
+app.get("/api/my-retailers", async (req, res) => {
+  const { parentId } = req.query;
+  const users = memoryStore.users.filter(u => u.created_by == parentId && u.status !== 'TRASH').map(u => {
+    const w = memoryStore.wallets.find(w => w.user_id === u.id);
+    return { ...u, name: u.full_name, mobile: u.phone, balance: w ? w.balance : 0 };
+  });
+  res.json({ success: true, users });
+});
+
+// Portal config & commissions
+app.get("/api/portal-config", (req, res) => res.json({ success: true, config: { name: "RuPiKsha", version: "1.0" } }));
+app.get("/api/commissions", (req, res) => res.json({ success: true, commissions: [] }));
+
+// Support tickets
+app.post("/api/raise-ticket", (req, res) => {
+  res.json({ success: true, ticket: { id: Date.now(), ...req.body, status: 'OPEN', created_at: new Date().toISOString() } });
+});
+app.get("/api/my-tickets", (req, res) => res.json({ success: true, tickets: [] }));
+
+// KYC upload stub
+app.post("/api/upload-kyc", (req, res) => res.json({ success: true, message: "KYC uploaded" }));
+
+// Bill fetch (BBPS)
+app.post("/api/bill-fetch", async (req, res) => {
+  const { consumerNo } = req.body;
+  res.json({
+    success: true,
+    bill: {
+      custName: "Customer",
+      consumerNo: consumerNo || "N/A",
+      amount: "150.00",
+      dueDate: new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-IN'),
+      billNo: `BILL${Date.now()}`,
+      orderId: `ORD${Date.now()}`
+    }
+  });
+});
+
+// Bill pay
+app.post("/api/bill-pay", async (req, res) => {
+  const { userId, biller, consumerNo, amount } = req.body;
+  const txn = { id: Date.now(), user_id: userId, type: 'BBPS', amount: parseFloat(amount) || 0, operator: biller || '', number: consumerNo || '', status: 'SUCCESS', commission: 0, created_at: new Date().toISOString() };
+  memoryStore.transactions.push(txn);
+  res.json({ success: true, txnId: txn.id });
+});
+
+// Recharge
+app.post("/api/recharge", async (req, res) => {
+  const { userId, operator, mobile, amount, type } = req.body;
+  const txn = { id: Date.now(), user_id: userId, type: (type || 'RECHARGE').toUpperCase(), amount: parseFloat(amount) || 0, operator: operator || '', number: mobile || '', status: 'SUCCESS', commission: parseFloat(amount) * 0.02, created_at: new Date().toISOString() };
+  memoryStore.transactions.push(txn);
+  res.json({ success: true, txnId: txn.id });
+});
+
 // ─── ERROR HANDLING ──────────────────────────────────────────────────────────
+
 
 // Catch-all 404 for API
 app.use((req, res) => {

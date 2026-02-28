@@ -1,8 +1,6 @@
 import { sendOTPEmail, sendCredentialsEmail } from './emailService';
 
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
-    ? `${import.meta.env.VITE_BACKEND_URL}/api`
-    : '/api';
+export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '') + '/api';
 
 
 export const dataService = {
