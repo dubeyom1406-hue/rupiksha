@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const path = require("path");
+const { XMLParser } = require('fast-xml-parser');
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
@@ -679,6 +680,7 @@ app.post("/send-otp", async (req, res) => {
   otpStore.set(targetEmail, { otp, expires: Date.now() + 300000 });
 
   try {
+    console.log(`📤 Sending OTP to: ${targetEmail}...`);
     await transporter.sendMail({
       from: `"RuPiKsha Support" <${process.env.EMAIL_USER}>`,
       to: targetEmail,
@@ -692,10 +694,11 @@ app.post("/send-otp", async (req, res) => {
           <p>This OTP will expire in 5 minutes.</p>
         </div>`
     });
+    console.log(`✅ OTP sent successfully to ${targetEmail}`);
     res.json({ success: true, message: "OTP sent" });
   } catch (err) {
-    console.error("Mail Error:", err);
-    res.status(500).json({ error: "Failed to send email" });
+    console.error("❌ Mail Error:", err);
+    res.status(500).json({ success: false, error: "Failed to send email: " + err.message });
   }
 });
 
@@ -854,28 +857,163 @@ app.get("/my-tickets", (req, res) => res.json({ success: true, tickets: [] }));
 // KYC upload stub
 app.post("/upload-kyc", (req, res) => res.json({ success: true, message: "KYC uploaded" }));
 
+// Helper for BBPS Service Type mapping
+const getVenusServiceType = (cat) => {
+  switch ((cat || '').toLowerCase()) {
+    case 'electricity': return 'EB';
+    case 'water': return 'WT';
+    case 'gas': return 'PG';
+    case 'broadband': return 'BB';
+    case 'landline': return 'LL';
+    case 'insurance': return 'IS';
+    case 'fastag': return 'FA';
+    default: return 'EB';
+  }
+};
+
+const VENUS_AUTH = {
+  key: "10092",
+  pass: "RUPIKSHA@816",
+  base: "https://venusrecharge.co.in"
+};
+
+const xmlParser = new XMLParser();
+
 // Bill fetch (BBPS)
 app.post("/bill-fetch", async (req, res) => {
-  const { consumerNo } = req.body;
-  res.json({
-    success: true,
-    bill: {
-      custName: "Customer",
-      consumerNo: consumerNo || "N/A",
-      amount: "150.00",
-      dueDate: new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-IN'),
-      billNo: `BILL${Date.now()}`,
-      orderId: `ORD${Date.now()}`
+  try {
+    let { consumerNo, category, dob, opcode, subDiv, mobile, email } = req.body;
+
+    if (category === 'insurance' && !dob) {
+      return res.status(400).json({ success: false, message: "Date of Birth (YYYY-MM-DD or YYYY/MM/DD) is required for Insurance fetching", code: "IRP" });
     }
-  });
+
+    consumerNo = (consumerNo || "").replace(/\s+/g, "");
+    opcode = (opcode || "").trim().toUpperCase();
+    mobile = mobile || "";
+    email = email ? encodeURIComponent(email) : "sauravanand9782%40gmail.com";
+
+    if (!opcode || opcode === "UNDEFINED" || opcode === "NONE" || opcode === "NULL") {
+      return res.status(400).json({ success: false, message: "Invalid Opcode. Please select the biller again." });
+    }
+    if (mobile.length < 10) {
+      return res.status(400).json({ success: false, message: "Valid 10-digit Consumer Mobile Number is required." });
+    }
+
+    // According to user request: http://13.200.239.248:8080/bbps/fetch?accountNumber=...&mobileNo=...&operatorCode=LIC&serviceType=INS&subdiv=2003/02/20&email=...
+    let url = `http://13.200.239.248:8080/bbps/fetch?accountNumber=${encodeURIComponent(consumerNo)}&mobileNo=${mobile}&operatorCode=${opcode}&serviceType=${category === 'insurance' ? 'INS' : getVenusServiceType(category)}&email=${email}`;
+
+    if (dob) {
+      const safeDob = dob.replace(/[^a-zA-Z0-9\/]/g, ""); // preserves YYYY/MM/DD
+      // User requested DOB to be passed as subdiv parameter
+      url += `&subdiv=${safeDob}`;
+    } else if (subDiv && subDiv !== "undefined") {
+      url += `&subdiv=${encodeURIComponent(subDiv.replace(/[^a-zA-Z0-9]/g, ""))}`;
+    }
+
+    console.log("[PROXY API FETCH] Requesting:", url);
+    const fetchRes = await fetch(url);
+    const xmlResponse = await fetchRes.text();
+    console.log("[PROXY API FETCH] Response:", xmlResponse);
+
+    try {
+      const xmlJson = xmlParser.parse(xmlResponse);
+      let responseRoot = xmlJson.Response || xmlJson.BillFetch || xmlJson;
+      const status = (responseRoot.ResponseStatus || "").toUpperCase();
+      const desc = responseRoot.Description || "";
+
+      if (status === "IAC" || status === "UAC" || desc.toLowerCase().includes("unauthorized access") || desc.toLowerCase().includes("unauthorised access")) {
+        return res.json({ success: false, message: "API Proxy: Unauthorized Access. Please coordinate with Venus to Whitelist Server IP." });
+      }
+
+      const isSuccess = status === "TXN" || status === "SAC" || status === "RCS" || desc.toUpperCase().includes("SUCCESS");
+
+      if (isSuccess) {
+        const bill = {
+          custName: responseRoot.ConsumerName || responseRoot.customerName || "Valued Customer",
+          amount: parseFloat(responseRoot.DueAmount || responseRoot.amount || 0),
+          dueDate: responseRoot.DueDate || "N/A",
+          billNo: responseRoot.OrderId || responseRoot.referenceId || `R${Date.now()}`,
+          orderId: responseRoot.OrderId || "",
+          merchantRef: responseRoot.referenceId || `R${Date.now()}`
+        };
+        return res.json({ success: true, bill, source: "PROXY_API" });
+      }
+
+      return res.json({ success: false, message: desc || ("Error: " + status) });
+    } catch (parseEx) {
+      console.error("XML Parse failed:", parseEx);
+      return res.json({ success: true, raw: xmlResponse, source: "PROXY_API_RAW" });
+    }
+
+  } catch (e) {
+    return res.status(500).json({ success: false, message: "Proxy API Error: " + e.message });
+  }
 });
 
 // Bill pay
 app.post("/bill-pay", async (req, res) => {
-  const { userId, biller, consumerNo, amount } = req.body;
-  const txn = { id: Date.now(), user_id: userId, type: 'BBPS', amount: parseFloat(amount) || 0, operator: biller || '', number: consumerNo || '', status: 'SUCCESS', commission: 0, created_at: new Date().toISOString() };
-  memoryStore.transactions.push(txn);
-  res.json({ success: true, txnId: txn.id });
+  try {
+    let { userId, biller, consumerNo, amount, category, opcode, subDiv, mobile, dob, orderId, email } = req.body;
+
+    consumerNo = (consumerNo || "").replace(/\s+/g, "");
+    opcode = (opcode || "").trim().toUpperCase();
+    mobile = mobile || "";
+    category = category || "electricity";
+    email = email ? encodeURIComponent(email) : "sauravanand9782%40gmail.com";
+
+    if (!opcode || opcode === "UNDEFINED" || opcode === "NONE" || opcode === "NULL") {
+      return res.status(400).json({ success: false, message: "Invalid Payment Biller selection." });
+    }
+    if (mobile.length < 10) {
+      return res.status(400).json({ success: false, message: "Valid 10-digit Consumer Mobile Number is required." });
+    }
+
+    // Example Pay Request to new proxy
+    let url = `http://13.200.239.248:8080/bbps/pay?accountNumber=${encodeURIComponent(consumerNo)}&mobileNo=${mobile}&operatorCode=${opcode}&serviceType=${category === 'insurance' ? 'INS' : getVenusServiceType(category)}&amount=${amount}&email=${email}`;
+
+    if (dob) {
+      const safeDob = dob.replace(/[^a-zA-Z0-9\/]/g, "");
+      url += `&subdiv=${safeDob}`;
+    } else if (subDiv && subDiv !== "undefined") {
+      url += `&subdiv=${encodeURIComponent(subDiv.replace(/[^a-zA-Z0-9]/g, ""))}`;
+    }
+
+    console.log("[PROXY API PAY] Requesting:", url);
+    const fetchRes = await fetch(url);
+    const xmlResponse = await fetchRes.text();
+    console.log("[PROXY API PAY] Response:", xmlResponse);
+
+    try {
+      const xmlJson = xmlParser.parse(xmlResponse);
+      let responseRoot = xmlJson.Response || xmlJson.PaymentBill || xmlJson;
+      const status = (responseRoot.ResponseStatus || "").toUpperCase();
+      const desc = responseRoot.Description || "";
+
+      if (status === "TXN" || status === "SAC" || status === "RCS" || desc.toUpperCase().includes("SUCCESS")) {
+        const txId = responseRoot.OperatorTxnId || responseRoot.OrderId || responseRoot.referenceId || `R${Date.now()}`;
+
+        // Track in our db
+        const txn = { id: Date.now(), user_id: userId, type: 'BBPS', amount: parseFloat(amount) || 0, operator: opcode || biller, number: consumerNo || '', status: 'SUCCESS', commission: 0, created_at: new Date().toISOString() };
+        memoryStore.transactions.push(txn);
+
+        return res.json({
+          success: true,
+          message: desc || "Payment Successful!",
+          txId: txId,
+          source: "PROXY_API"
+        });
+      }
+
+      return res.json({ success: false, message: desc || ("Payment Error: " + status) });
+    } catch (parseEx) {
+      console.error("XML Parse failed:", parseEx);
+      return res.json({ success: true, raw: xmlResponse, source: "PROXY_API_RAW" });
+    }
+
+  } catch (e) {
+    return res.status(500).json({ success: false, message: "Proxy API Error: " + e.message });
+  }
 });
 
 // Recharge

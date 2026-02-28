@@ -43,7 +43,9 @@ export const sendOTPEmail = async (email, otp, name) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: email, otp, name })
         });
-        return await response.json();
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || data.message || "Failed to send OTP");
+        return data;
     } catch (err) {
         console.error('❌ [OTP Email] Failed:', err);
         return { success: false, message: err.message };
@@ -67,7 +69,9 @@ export const sendCredentialsEmail = async (params) => {
                 portal_type: params.portalType
             })
         });
-        return await response.json();
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || data.message || "Failed to send credentials");
+        return data;
     } catch (err) {
         console.error('❌ [Credentials Email] Failed:', err);
         return { success: false, message: err.message };

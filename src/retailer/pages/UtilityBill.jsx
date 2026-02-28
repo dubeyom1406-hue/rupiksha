@@ -356,7 +356,7 @@ export default function UtilityBill() {
                     biller: biller.name || biller,
                     consumerNo,
                     opcode: opCode,
-                    category: selectedCat,
+                    category: selectedCat, // ensure category is passed to backend
                     subDiv: subDiv || '',
                     dob: dob ? dob.replace(/-/g, '/') : '',
                     mobile: userMobile,
@@ -732,11 +732,9 @@ export default function UtilityBill() {
                                                             value={dob}
                                                             max={new Date().toISOString().split('T')[0]}
                                                             onChange={e => {
-                                                                setDob(e.target.value);
-                                                                // Extract DDMMYYYY for validation check
-                                                                const [y, m, d] = (e.target.value || '').split('-');
-                                                                const ddmmyyyy = d && m && y ? `${d}${m}${y}` : '';
-                                                                if (ddmmyyyy.length === 8 && consumerNo.length >= 6 && billMobile.length === 10) {
+                                                                const newDob = e.target.value;
+                                                                setDob(newDob);
+                                                                if (newDob.length === 10 && consumerNo.length >= 6 && billMobile.length === 10) {
                                                                     clearTimeout(autoTimer.current);
                                                                     autoTimer.current = setTimeout(() => { doFetch(); }, 600);
                                                                 }

@@ -4,9 +4,13 @@ import {
     Layout, Type, BarChart2, Zap, Star, Phone, Eye, EyeOff,
     Save, RotateCcw, Plus, Trash2, ChevronDown, ChevronUp,
     CheckCircle2, Globe, Edit3, ToggleLeft, ToggleRight,
-    Palette, AlignLeft, Settings, Image as ImageIcon
+    Palette, AlignLeft, Settings, Image as ImageIcon,
+    ExternalLink, Sparkles, Wand2, ShieldCheck, Mail, MapPin,
+    AlertTriangle, Send, RefreshCw, Layers, Monitor, Target
 } from 'lucide-react';
 import { landingContentService } from '../../services/landingContentService';
+
+const Rocket = ({ size, style }) => <Layers size={size} style={style} />;
 
 const SECTION_ICONS = {
     hero: Layout, stats: BarChart2, services: Zap,
@@ -14,57 +18,62 @@ const SECTION_ICONS = {
     contact: Phone, company: Globe, navbar: Layout,
 };
 
-function SectionHeader({ icon: Icon, title, color, expanded, onToggle, badge }) {
-    return (
-        <button onClick={onToggle}
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-2xl">
-            <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
-                    <Icon size={16} style={{ color }} />
-                </div>
-                <div className="text-left">
-                    <p className="text-sm font-black text-slate-800 uppercase tracking-wide">{title}</p>
-                    {badge && <p className="text-[10px] text-slate-400 font-medium">{badge}</p>}
-                </div>
+const SectionHeader = ({ icon: Icon, title, color, expanded, onToggle, badge }) => (
+    <button onClick={onToggle}
+        className="w-full flex items-center justify-between p-6 hover:bg-slate-50/50 transition-all active:scale-[0.99] group/header">
+        <div className="flex items-center gap-5">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover/header:rotate-12" style={{ background: `linear-gradient(135deg, ${color}33, ${color}11)`, border: `1px solid ${color}44` }}>
+                <Icon size={20} style={{ color }} />
             </div>
-            {expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-        </button>
-    );
-}
+            <div className="text-left">
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-[0.15em] italic">{title}</h4>
+                {badge && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-70">{badge}</p>}
+            </div>
+        </div>
+        <div className={`p-2 rounded-xl transition-all ${expanded ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 group-hover/header:bg-slate-200'}`}>
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+    </button>
+);
 
-function Field({ label, value, onChange, type = 'text', hint, multiline = false }) {
-    return (
-        <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-            {multiline ? (
-                <textarea value={value} onChange={e => onChange(e.target.value)} rows={3}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-indigo-400 transition-all resize-none" />
-            ) : (
+const Field = ({ label, value, onChange, type = 'text', hint, multiline = false, icon: Icon }) => (
+    <div className="space-y-2 group/field">
+        <div className="flex items-center justify-between">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 group-focus-within/field:text-indigo-500 transition-colors">
+                {Icon && <Icon size={12} />} {label}
+            </label>
+        </div>
+        {multiline ? (
+            <textarea value={value} onChange={e => onChange(e.target.value)} rows={3}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-indigo-400 focus:bg-white transition-all resize-none shadow-sm placeholder:text-slate-300"
+                placeholder={`Enter ${label.toLowerCase()}...`} />
+        ) : (
+            <div className="relative">
                 <input type={type} value={value} onChange={e => onChange(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-indigo-400 transition-all" />
-            )}
-            {hint && <p className="text-[9px] text-slate-400">{hint}</p>}
-        </div>
-    );
-}
+                    className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-black text-slate-800 outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-sm placeholder:text-slate-300"
+                    placeholder={`Enter ${label.toLowerCase()}...`} />
+                {type === 'color' && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg pointer-events-none border border-white shadow-sm" style={{ background: value }} />}
+            </div>
+        )}
+        {hint && <p className="text-[9px] text-slate-400 font-bold italic tracking-wide">{hint}</p>}
+    </div>
+);
 
-function Toggle({ label, value, onChange }) {
-    return (
-        <div className="flex items-center justify-between py-2">
-            <span className="text-sm font-semibold text-slate-700">{label}</span>
-            <button onClick={() => onChange(!value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide transition-all ${value ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                {value ? <><ToggleRight size={14} /> Visible</> : <><ToggleLeft size={14} /> Hidden</>}
-            </button>
+const Toggle = ({ label, value, onChange }) => (
+    <button onClick={() => onChange(!value)}
+        className={`group flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-[0.98] ${value ? 'bg-emerald-50/50 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
+        <span className={`text-[11px] font-black uppercase tracking-wider transition-colors ${value ? 'text-emerald-700' : 'text-slate-500'}`}>{label}</span>
+        <div className={`w-10 h-6 rounded-full relative transition-all shadow-inner ${value ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all ${value ? 'left-5' : 'left-1'}`} />
         </div>
-    );
-}
+    </button>
+);
 
 export default function LandingCMS() {
     const [content, setContent] = useState(landingContentService.get());
+    const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [expanded, setExpanded] = useState({ hero: true });
-    const [activePreview, setActivePreview] = useState(false);
 
     const toggle = (section) => setExpanded(p => ({ ...p, [section]: !p[section] }));
 
@@ -113,256 +122,275 @@ export default function LandingCMS() {
     };
 
     const handleSave = () => {
-        landingContentService.save(content);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        setIsSaving(true);
+        setTimeout(() => {
+            landingContentService.save(content);
+            setIsSaving(false);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        }, 1200);
     };
 
     const handleReset = () => {
-        if (window.confirm('Reset all content to defaults? This cannot be undone.')) {
+        if (window.confirm('WARNING: IRREVERSIBLE ACTION\nReset all website content to core factory defaults?')) {
             landingContentService.reset();
             setContent(landingContentService.get());
         }
     };
 
     const SECTIONS = [
-        { id: 'hero', label: 'Hero Section', icon: Layout, color: '#6366f1', badge: 'Headline, CTA, Badge' },
-        { id: 'stats', label: 'Stats Bar', icon: BarChart2, color: '#10b981', badge: `${content.stats.length} counters` },
-        { id: 'services', label: 'Services Visibility', icon: Zap, color: '#f59e0b', badge: `${Object.values(content.services_visibility).filter(Boolean).length} visible` },
-        { id: 'how', label: 'How It Works', icon: Star, color: '#8b5cf6', badge: `${content.how.length} steps` },
-        { id: 'advantages', label: 'Why Choose Us', icon: Star, color: '#ef4444', badge: `${content.advantages.length} cards` },
-        { id: 'features', label: 'Key Features', icon: Star, color: '#06b6d4', badge: `${content.features.length} items` },
-        { id: 'contact', label: 'Contact Info', icon: Phone, color: '#0ea5e9', badge: 'Phone, Email, Address' },
-        { id: 'company', label: 'Company Info', icon: Globe, color: '#64748b', badge: 'Name, CIN, GSTIN' },
-        { id: 'sections', label: 'Section Visibility', icon: Eye, color: '#f97316', badge: 'Show/Hide entire sections' },
+        { id: 'hero', label: 'Launch_Sequence', icon: Rocket, color: '#6366f1', badge: 'HERO MODULE CONTROL' },
+        { id: 'stats', label: 'Network_Metrix', icon: BarChart2, color: '#10b981', badge: `${content.stats.length} STATS OPERATIONAL` },
+        { id: 'services', label: 'Service_Nodes', icon: Zap, color: '#f59e0b', badge: `${Object.values(content.services_visibility).filter(Boolean).length} NODES VISIBLE` },
+        { id: 'how', label: 'Ops_Protocol', icon: Target, color: '#8b5cf6', badge: `${content.how.length} STEPS DEFINED` },
+        { id: 'advantages', label: 'Core_Values', icon: ShieldCheck, color: '#ef4444', badge: `${content.advantages.length} PROPOSITIONS` },
+        { id: 'features', label: 'System_Assets', icon: Layers, color: '#06b6d4', badge: `${content.features.length} FEATURES ENABLED` },
+        { id: 'contact', label: 'Intel_Channels', icon: Phone, color: '#0ea5e9', badge: 'COMMS DATASET' },
+        { id: 'company', label: 'Entity_Specs', icon: Globe, color: '#64748b', badge: 'LEGAL REGISTRY' },
+        { id: 'sections', label: 'Grid_Visibility', icon: Monitor, color: '#f97316', badge: 'GLOBAL VISIBILITY TOGGLES' },
     ];
 
     return (
-        <div className="space-y-4 font-['Inter',sans-serif]">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center">
-                        <Edit3 size={18} className="text-indigo-400" />
+        <div className="space-y-8 animate-in fade-in duration-700 max-w-5xl mx-auto pb-24">
+            {/* ── CENTRAL CONTROL HEADER ───────────────────────────────────── */}
+            <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                <div className="relative bg-[#0d1117] rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between border border-white/[0.08] shadow-2xl overflow-hidden">
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-32 -mt-32" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px] -ml-24 -mb-24" />
+
+                    <div className="flex items-center gap-6 relative z-10">
+                        <div className="w-16 h-16 rounded-[1.75rem] bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center shadow-2xl shadow-indigo-500/20 rotate-3 transition-transform hover:rotate-6">
+                            <Wand2 size={28} className="text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-white italic uppercase tracking-[0.2em] leading-none mb-2">Web_Commander</h1>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                <p className="text-[10px] text-indigo-300 font-black uppercase tracking-[0.3em] opacity-80">Rupiksha_CMS v4.0 • Live Transmission Enabled</p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-base font-black text-white uppercase tracking-widest">Landing Page CMS</h1>
-                        <p className="text-xs text-slate-400">Control every element of rupiksha.in</p>
+
+                    <div className="flex items-center gap-4 mt-8 md:mt-0 relative z-10">
+                        <button onClick={() => window.open('/', '_blank')}
+                            className="p-4 bg-white/5 text-slate-400 rounded-2xl border border-white/[0.08] hover:bg-white/10 hover:text-white transition-all group/btn"
+                            title="Preview Site"
+                        >
+                            <ExternalLink size={20} className="group-hover/btn:scale-110 transition-transform" />
+                        </button>
+                        <button onClick={handleReset}
+                            className="p-4 bg-white/5 text-rose-400/70 rounded-2xl border border-white/[0.08] hover:bg-rose-500/10 hover:text-rose-400 transition-all"
+                            title="Reset Grid"
+                        >
+                            <RotateCcw size={20} />
+                        </button>
+                        <button onClick={handleSave} disabled={isSaving}
+                            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] transition-all relative overflow-hidden group/save ${saved ? 'bg-emerald-500 text-white' : 'bg-white text-slate-900 shadow-2xl hover:translate-y-[-2px] active:translate-y-[0px]'}`}>
+                            {isSaving ? (
+                                <RefreshCw size={16} className="animate-spin" />
+                            ) : saved ? (
+                                <CheckCircle2 size={16} />
+                            ) : (
+                                <Save size={16} className="group-hover/save:scale-110 transition-transform" />
+                            )}
+                            {isSaving ? 'Synchronizing...' : saved ? 'Deployed!' : 'Push Changes'}
+                            {/* Shine effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/save:translate-x-full transition-transform duration-1000" />
+                        </button>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <a href="/" target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1.5 bg-white/10 text-white text-[10px] font-black uppercase tracking-wide px-3 py-2 rounded-xl hover:bg-white/20 transition-all">
-                        <Eye size={13} /> Preview
-                    </a>
-                    <button onClick={handleReset}
-                        className="flex items-center gap-1.5 bg-white/10 text-white text-[10px] font-black uppercase tracking-wide px-3 py-2 rounded-xl hover:bg-red-500/20 transition-all">
-                        <RotateCcw size={13} /> Reset
-                    </button>
-                    <button onClick={handleSave}
-                        className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-black uppercase tracking-wide px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all">
-                        {saved ? <><CheckCircle2 size={13} /> Saved!</> : <><Save size={13} /> Save Changes</>}
-                    </button>
                 </div>
             </div>
 
-            {/* Save banner */}
+            {/* ── MODULE CARDS ─────────────────────────────────────────────── */}
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                    {SECTIONS.map((sec, idx) => (
+                        <motion.div key={sec.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                            className={`bg-white rounded-[2.5rem] shadow-xl border overflow-hidden transition-all duration-500 ${expanded[sec.id] ? 'border-indigo-100 ring-4 ring-indigo-50/50' : 'border-slate-100 hover:border-indigo-200 shadow-slate-200/50'}`}>
+                            <SectionHeader icon={sec.icon} title={sec.label} color={sec.color}
+                                badge={sec.badge} expanded={!!expanded[sec.id]} onToggle={() => toggle(sec.id)} />
+                            <AnimatePresence>
+                                {expanded[sec.id] && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-slate-50/30">
+                                        <div className="border-t border-slate-100 p-8 md:p-10 space-y-10">
+
+                                            {/* ── HERO ── */}
+                                            {sec.id === 'hero' && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    <Field label="Protocol Badge" value={content.hero.badge} onChange={v => update('hero.badge', v)} icon={Sparkles} hint="Accent text displayed above the main headline" />
+                                                    <Field label="Primary Command" value={content.hero.cta_primary} onChange={v => update('hero.cta_primary', v)} icon={Send} />
+                                                    <div className="md:col-span-2">
+                                                        <Field label="Executive Headline (HTML Allowed)" value={content.hero.headline} onChange={v => update('hero.headline', v)} multiline icon={Type} hint='Embed styles for emphasis: <span style="background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; color: transparent;">Your Text</span>' />
+                                                    </div>
+                                                    <div className="md:col-span-2">
+                                                        <Field label="System Brief (Sub-headline)" value={content.hero.subheadline} onChange={v => update('hero.subheadline', v)} multiline icon={AlignLeft} />
+                                                    </div>
+                                                    <Field label="Secondary Command" value={content.hero.cta_secondary} onChange={v => update('hero.cta_secondary', v)} icon={Zap} />
+                                                    <Field label="Global Announcement" value={content.hero.announcement} onChange={v => update('hero.announcement', v)} icon={ShieldCheck} hint="Text appearing in the global notification strip" />
+                                                </div>
+                                            )}
+
+                                            {/* ── STATS ── */}
+                                            {sec.id === 'stats' && (
+                                                <div className="space-y-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {content.stats.map((stat, i) => (
+                                                            <div key={i} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative group/stat hover:border-emerald-300 transition-all hover:shadow-emerald-500/5">
+                                                                <button onClick={() => removeArrayItem('stats', i)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="col-span-2">
+                                                                        <Field label={`DATA_STREAM_0${i + 1}`} value={stat.label} onChange={v => updateArrayItem('stats', i, 'label', v)} />
+                                                                    </div>
+                                                                    <Field label="Value" value={stat.num} onChange={v => updateArrayItem('stats', i, 'num', v)} />
+                                                                    <Field label="Suffix" value={stat.suffix} onChange={v => updateArrayItem('stats', i, 'suffix', v)} />
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <button onClick={() => addArrayItem('stats', { num: '100', label: 'New Metric', suffix: '+', prefix: '' })}
+                                                        className="w-full flex items-center justify-center gap-3 py-6 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-500 transition-all group/add">
+                                                        <Plus size={18} className="group-hover/add:rotate-90 transition-transform" /> Connect_New_Data_Node
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* ── SERVICES ── */}
+                                            {sec.id === 'services' && (
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    {Object.entries(content.services_visibility).map(([name, visible]) => (
+                                                        <Toggle key={name} label={name} value={visible}
+                                                            onChange={v => update(`services_visibility.${name}`, v)} />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* ── OPS PROTOCOL (How It Works) ── */}
+                                            {sec.id === 'how' && (
+                                                <div className="space-y-6 pr-4">
+                                                    {content.how.map((step, i) => (
+                                                        <div key={i} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm relative hover:border-indigo-200 transition-all group/item">
+                                                            <div className="absolute -left-3 top-8 w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-lg font-black italic shadow-xl shadow-slate-900/20 group-hover/item:scale-110 transition-transform">
+                                                                {step.step}
+                                                            </div>
+                                                            <button onClick={() => removeArrayItem('how', i)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-rose-500 transition-colors">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                            <div className="pl-6 grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                                                                <Field label="Protocol_Title" value={step.title} onChange={v => updateArrayItem('how', i, 'title', v)} />
+                                                                <Field label="Color_Coding" value={step.color} type="color" onChange={v => updateArrayItem('how', i, 'color', v)} />
+                                                                <div className="md:col-span-2">
+                                                                    <Field label="Execution_Parameters" value={step.desc} onChange={v => updateArrayItem('how', i, 'desc', v)} multiline />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <button onClick={() => addArrayItem('how', { step: `0${content.how.length + 1}`, color: '#6366f1', title: 'New Protocol', desc: 'Initialize data sequence...' })}
+                                                        className="w-full flex items-center justify-center gap-3 py-6 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-slate-900 hover:text-white transition-all">
+                                                        <Plus size={18} /> Append_New_Sequence
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* ── CORE VALUES ── */}
+                                            {sec.id === 'advantages' && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {content.advantages.map((adv, i) => (
+                                                        <div key={i} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm relative hover:shadow-xl transition-all group/adv">
+                                                            <div className="flex items-center justify-between mb-8">
+                                                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner bg-slate-50 group-hover/adv:rotate-6 transition-transform">
+                                                                    {adv.icon}
+                                                                </div>
+                                                                <button onClick={() => removeArrayItem('advantages', i)} className="p-2 text-slate-200 hover:text-rose-500 transition-all">
+                                                                    <X size={20} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="space-y-4">
+                                                                <Field label="Value_Descriptor" value={adv.title} onChange={v => updateArrayItem('advantages', i, 'title', v)} />
+                                                                <Field label="Logic_Summary" value={adv.desc} onChange={v => updateArrayItem('advantages', i, 'desc', v)} multiline />
+                                                                <Field label="Interface_Accent" value={adv.color} type="color" onChange={v => updateArrayItem('advantages', i, 'color', v)} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <button onClick={() => addArrayItem('advantages', { icon: '💎', title: 'Absolute Integrity', desc: 'Immutable trust protocols...', color: '#10b981' })}
+                                                        className="md:col-span-2 flex items-center justify-center gap-3 py-10 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/30 transition-all">
+                                                        <Plus size={24} /> Inject_New_Proposition
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* ── CONTACT & COMPANY ── */}
+                                            {(sec.id === 'contact' || sec.id === 'company') && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    {sec.id === 'contact' ? (
+                                                        <>
+                                                            <Field label="Support_Voice" value={content.contact.phone} onChange={v => update('contact.phone', v)} icon={Phone} />
+                                                            <Field label="Secure_Mailbox" value={content.contact.email} onChange={v => update('contact.email', v)} icon={Mail} />
+                                                            <Field label="Instant_Bridge" value={content.contact.whatsapp} onChange={v => update('contact.whatsapp', v)} icon={MessageCircle} />
+                                                            <div className="md:col-span-2">
+                                                                <Field label="Command_Center_Location" value={content.contact.address} onChange={v => update('contact.address', v)} multiline icon={MapPin} />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Field label="Entity_Signature" value={content.company.name} onChange={v => update('company.name', v)} icon={Building2} />
+                                                            <Field label="Core_Tagline" value={content.company.tagline} onChange={v => update('company.tagline', v)} icon={Sparkles} />
+                                                            <Field label="Epoch_Identifier" value={content.company.founded} onChange={v => update('company.founded', v)} icon={Target} />
+                                                            <Field label="Tax_Identity (GST)" value={content.company.gstin} onChange={v => update('company.gstin', v)} icon={ShieldCheck} />
+                                                            <div className="md:col-span-2">
+                                                                <Field label="Corporate_Registry (CIN)" value={content.company.cin} onChange={v => update('company.cin', v)} icon={Layers} />
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* ── VISIBILITY GRID ── */}
+                                            {sec.id === 'sections' && (
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                                                    {Object.entries(content.sections).map(([name, visible]) => (
+                                                        <Toggle key={name} label={name.replace(/_/g, ' ')} value={visible}
+                                                            onChange={v => update(`sections.${name}`, v)} />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Floating Banner */}
             <AnimatePresence>
                 {saved && (
-                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-3 rounded-xl text-sm font-bold">
-                        <CheckCircle2 size={16} /> Landing page updated! Changes are live on your website.
+                    <motion.div initial={{ opacity: 0, scale: 0.9, y: 50 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 50 }}
+                        className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[100] bg-slate-900/90 backdrop-blur-xl border border-white/20 text-white px-8 py-4 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <CheckCircle2 size={24} />
+                        </div>
+                        <div className="pr-4 border-r border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">System_Sync_Finished</p>
+                            <p className="text-sm font-bold">Rupiksha.in updated successfully.</p>
+                        </div>
+                        <button onClick={() => setSaved(false)} className="text-slate-400 hover:text-white transition-colors">
+                            <X size={18} />
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Sections */}
-            <div className="space-y-3">
-                {SECTIONS.map(sec => (
-                    <div key={sec.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                        <SectionHeader icon={sec.icon} title={sec.label} color={sec.color}
-                            badge={sec.badge} expanded={!!expanded[sec.id]} onToggle={() => toggle(sec.id)} />
-                        <AnimatePresence>
-                            {expanded[sec.id] && (
-                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                    <div className="border-t border-slate-100 p-5 space-y-4">
-
-                                        {/* ── HERO ── */}
-                                        {sec.id === 'hero' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <Field label="Top Badge Text" value={content.hero.badge} onChange={v => update('hero.badge', v)} hint="Small badge above headline (e.g. 🇮🇳 India's Most Trusted...)" />
-                                                <Field label="Primary CTA Button" value={content.hero.cta_primary} onChange={v => update('hero.cta_primary', v)} />
-                                                <Field label="Headline (HTML allowed)" value={content.hero.headline} onChange={v => update('hero.headline', v)} multiline hint='Use <span style="color:#22d3ee">text</span> for highlights' />
-                                                <Field label="Sub-headline" value={content.hero.subheadline} onChange={v => update('hero.subheadline', v)} multiline />
-                                                <Field label="Secondary CTA Button" value={content.hero.cta_secondary} onChange={v => update('hero.cta_secondary', v)} />
-                                                <Field label="Announcement Banner" value={content.hero.announcement} onChange={v => update('hero.announcement', v)} hint="Text shown in top announcement bar" />
-                                            </div>
-                                        )}
-
-                                        {/* ── STATS ── */}
-                                        {sec.id === 'stats' && (
-                                            <div className="space-y-3">
-                                                {content.stats.map((stat, i) => (
-                                                    <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase">Counter #{i + 1}</span>
-                                                            <button onClick={() => removeArrayItem('stats', i)} className="text-rose-400 hover:text-rose-600 transition-colors">
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                            <Field label="Number" value={stat.num} onChange={v => updateArrayItem('stats', i, 'num', v)} hint="e.g. 50K or 99.9" />
-                                                            <Field label="Label" value={stat.label} onChange={v => updateArrayItem('stats', i, 'label', v)} />
-                                                            <Field label="Prefix" value={stat.prefix} onChange={v => updateArrayItem('stats', i, 'prefix', v)} hint="e.g. ₹" />
-                                                            <Field label="Suffix" value={stat.suffix} onChange={v => updateArrayItem('stats', i, 'suffix', v)} hint="e.g. Cr+ or %" />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <button onClick={() => addArrayItem('stats', { num: '0', label: 'New Stat', suffix: '+', prefix: '' })}
-                                                    className="flex items-center gap-2 text-indigo-600 text-xs font-black uppercase tracking-wide w-full justify-center py-3 border-2 border-dashed border-indigo-200 rounded-xl hover:bg-indigo-50 transition-all">
-                                                    <Plus size={14} /> Add Counter
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* ── SERVICES VISIBILITY ── */}
-                                        {sec.id === 'services' && (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {Object.entries(content.services_visibility).map(([name, visible]) => (
-                                                    <Toggle key={name} label={name} value={visible}
-                                                        onChange={v => update(`services_visibility.${name}`, v)} />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* ── HOW IT WORKS ── */}
-                                        {sec.id === 'how' && (
-                                            <div className="space-y-3">
-                                                {content.how.map((step, i) => (
-                                                    <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase">Step {step.step}</span>
-                                                            <button onClick={() => removeArrayItem('how', i)} className="text-rose-400 hover:text-rose-600">
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                            <Field label="Step Number" value={step.step} onChange={v => updateArrayItem('how', i, 'step', v)} />
-                                                            <Field label="Title" value={step.title} onChange={v => updateArrayItem('how', i, 'title', v)} />
-                                                            <Field label="Color" value={step.color} type="color" onChange={v => updateArrayItem('how', i, 'color', v)} />
-                                                            <div className="md:col-span-3">
-                                                                <Field label="Description" value={step.desc} onChange={v => updateArrayItem('how', i, 'desc', v)} multiline />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <button onClick={() => addArrayItem('how', { step: `0${content.how.length + 1}`, color: '#6366f1', title: 'New Step', desc: 'Description here.' })}
-                                                    className="flex items-center gap-2 text-purple-600 text-xs font-black uppercase tracking-wide w-full justify-center py-3 border-2 border-dashed border-purple-200 rounded-xl hover:bg-purple-50 transition-all">
-                                                    <Plus size={14} /> Add Step
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* ── WHY CHOOSE US ── */}
-                                        {sec.id === 'advantages' && (
-                                            <div className="space-y-3">
-                                                {content.advantages.map((adv, i) => (
-                                                    <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase">Card #{i + 1}</span>
-                                                            <button onClick={() => removeArrayItem('advantages', i)} className="text-rose-400 hover:text-rose-600">
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                            <Field label="Icon (emoji)" value={adv.icon} onChange={v => updateArrayItem('advantages', i, 'icon', v)} />
-                                                            <Field label="Title" value={adv.title} onChange={v => updateArrayItem('advantages', i, 'title', v)} />
-                                                            <Field label="Accent Color" value={adv.color} type="color" onChange={v => updateArrayItem('advantages', i, 'color', v)} />
-                                                            <div className="col-span-2 md:col-span-4">
-                                                                <Field label="Description" value={adv.desc} onChange={v => updateArrayItem('advantages', i, 'desc', v)} multiline />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <button onClick={() => addArrayItem('advantages', { icon: '✨', title: 'New Advantage', desc: 'Description...', color: '#6366f1' })}
-                                                    className="flex items-center gap-2 text-rose-600 text-xs font-black uppercase tracking-wide w-full justify-center py-3 border-2 border-dashed border-rose-200 rounded-xl hover:bg-rose-50 transition-all">
-                                                    <Plus size={14} /> Add Advantage Card
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* ── KEY FEATURES ── */}
-                                        {sec.id === 'features' && (
-                                            <div className="space-y-3">
-                                                {content.features.map((feat, i) => (
-                                                    <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase">Feature #{i + 1}</span>
-                                                            <button onClick={() => removeArrayItem('features', i)} className="text-rose-400 hover:text-rose-600">
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                            <Field label="Icon (emoji)" value={feat.icon} onChange={v => updateArrayItem('features', i, 'icon', v)} />
-                                                            <Field label="Title" value={feat.title} onChange={v => updateArrayItem('features', i, 'title', v)} />
-                                                            <Field label="Description" value={feat.desc} onChange={v => updateArrayItem('features', i, 'desc', v)} />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <button onClick={() => addArrayItem('features', { icon: '✨', title: 'New Feature', desc: 'Feature description.' })}
-                                                    className="flex items-center gap-2 text-cyan-600 text-xs font-black uppercase tracking-wide w-full justify-center py-3 border-2 border-dashed border-cyan-200 rounded-xl hover:bg-cyan-50 transition-all">
-                                                    <Plus size={14} /> Add Feature
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* ── CONTACT ── */}
-                                        {sec.id === 'contact' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <Field label="Phone Number" value={content.contact.phone} onChange={v => update('contact.phone', v)} />
-                                                <Field label="Email Address" value={content.contact.email} onChange={v => update('contact.email', v)} />
-                                                <Field label="WhatsApp Number" value={content.contact.whatsapp} onChange={v => update('contact.whatsapp', v)} />
-                                                <Field label="Office Address" value={content.contact.address} onChange={v => update('contact.address', v)} multiline />
-                                            </div>
-                                        )}
-
-                                        {/* ── COMPANY ── */}
-                                        {sec.id === 'company' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <Field label="Company Name" value={content.company.name} onChange={v => update('company.name', v)} />
-                                                <Field label="Tagline" value={content.company.tagline} onChange={v => update('company.tagline', v)} />
-                                                <Field label="Founded Year" value={content.company.founded} onChange={v => update('company.founded', v)} />
-                                                <Field label="CIN Number" value={content.company.cin} onChange={v => update('company.cin', v)} />
-                                                <Field label="GSTIN" value={content.company.gstin} onChange={v => update('company.gstin', v)} />
-                                            </div>
-                                        )}
-
-                                        {/* ── SECTION VISIBILITY ── */}
-                                        {sec.id === 'sections' && (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {Object.entries(content.sections).map(([name, visible]) => (
-                                                    <Toggle key={name} label={name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} value={visible}
-                                                        onChange={v => update(`sections.${name}`, v)} />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                ))}
-            </div>
-
-            {/* Floating Save */}
-            <div className="sticky bottom-4 flex justify-end">
-                <button onClick={handleSave}
-                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-2xl shadow-indigo-500/40 hover:scale-105 hover:shadow-indigo-500/60 active:scale-95 transition-all">
-                    {saved ? <CheckCircle2 size={18} /> : <Save size={18} />}
-                    {saved ? 'Changes Saved!' : 'Save & Publish'}
-                </button>
-            </div>
         </div>
     );
 }
+
+const MessageCircle = ({ size, className }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+    </svg>
+);
