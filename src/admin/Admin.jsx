@@ -17,6 +17,7 @@ import AdminPlanManager from './AdminPlanManager';
 import OurMap from '../superadmin/pages/OurMap';
 import LiveDashboard from './components/LiveDashboard';
 import EmployeeManager from './components/EmployeeManager';
+import LandingCMS from '../superadmin/pages/LandingCMS';
 import { useAuth } from '../context/AuthContext';
 
 const Admin = () => {
@@ -2031,7 +2032,7 @@ const Admin = () => {
                         { id: 'Approvals', icon: CheckCircle2 },
                         { id: 'Dashboard', icon: LayoutDashboard },
                         { id: 'EmployeeManager', icon: ShieldCheck, label: 'Employment' },
-                        { id: 'Landing Content', icon: FileText },
+                        { id: 'Landing Content', icon: FileText, label: 'Landing Page CMS' },
                         { id: 'Trash', icon: Trash2 },
                         { id: 'Services', icon: Package },
                         { id: 'Promotions', icon: Video },
@@ -2175,7 +2176,7 @@ const Admin = () => {
                     {activeSection === 'Approvals' && <ApprovalsTable />}
                     {activeSection === 'Dashboard' && <LiveDashboard data={data} distributors={distributors} superadmins={superadmins} />}
                     {activeSection === 'EmployeeManager' && <EmployeeManager />}
-                    {activeSection === 'Landing Content' && <DashboardEditor />}
+                    {activeSection === 'Landing Content' && <LandingCMS />}
                     {activeSection === 'Trash' && <TrashTable />}
                     {activeSection === 'Stats' && <StatsEditor />}
                     {activeSection === 'Services' && <ServicesEditor />}
