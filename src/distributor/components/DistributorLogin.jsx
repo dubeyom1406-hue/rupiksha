@@ -73,8 +73,8 @@ const DistributorLogin = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                    localStorage.setItem('rupiksha_token', data.token);
                     navigate('/distributor');
                 } else {
                     setLoginError(data.message || 'Invalid OTP');
@@ -88,8 +88,8 @@ const DistributorLogin = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                    localStorage.setItem('rupiksha_token', data.token);
                     navigate('/distributor');
                 } else {
                     setLoginError(data.message || 'Login failed');
@@ -119,7 +119,6 @@ const DistributorLogin = () => {
             });
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         } catch (err) {
-            console.warn("Location access denied or timed out");
         }
 
         try {

@@ -12,8 +12,6 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Area, AreaChart
 } from 'recharts';
-
-/* ─── Static demo data ──────────────────────────────────────── */
 const financeData = [
     { date: '1 Feb', credit: 220, debit: 580 },
     { date: '2 Feb', credit: 450, debit: 340 },
@@ -45,8 +43,6 @@ const goals = [
     { label: 'Active Retailers', sub: '20 retailer goal', pct: 45, color: '#10b981' },
     { label: 'Commission Goal', sub: '₹20,000 goal', pct: 82, color: '#f59e0b' },
 ];
-
-/* ─── Custom chart tooltip ─────────────────────────────────── */
 const ChartTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -61,25 +57,22 @@ const ChartTooltip = ({ active, payload, label }) => {
         </div>
     );
 };
-
-/* ─── Animated number ─────────────────────────────────────── */
 const AnimNum = ({ n, prefix = '' }) => {
     const [v, setV] = useState(0);
     useEffect(() => {
         const target = typeof n === 'number' ? n : 0;
-        const step = Math.max(1, Math.floor(target / 35));
+        const step = Math.max(1, Math.floor(target / 20));
         let cur = 0;
         const t = setInterval(() => {
             cur = Math.min(cur + step, target);
             setV(cur);
             if (cur >= target) clearInterval(t);
-        }, 28);
+        }, 50);
         return () => clearInterval(t);
     }, [n]);
     return <>{prefix}{v.toLocaleString('en-IN')}</>;
 };
 
-/* ═══════════════════════ MAIN ═══════════════════════════════ */
 const SuperAdminDashboard = () => {
     const navigate = useNavigate();
     const [dist, setDist] = useState(null);
@@ -95,8 +88,6 @@ const SuperAdminDashboard = () => {
         setLoading(true);
         const s = sharedDataService.getCurrentSuperAdmin();
         if (!s) return;
-
-        // Fetch real balance if possible, or use local
         const userBal = await dataService.getWalletBalance(s.id);
         setDist({ ...s, wallet: { balance: userBal } });
 
@@ -165,8 +156,6 @@ const SuperAdminDashboard = () => {
 
                 {/* ── Two‑column grid ───────────────────────────── */}
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-
-                    {/* ════════════ LEFT COLUMN ════════════ */}
                     <div className="space-y-6 min-w-0">
 
                         {/* Stat row */}
@@ -285,7 +274,6 @@ const SuperAdminDashboard = () => {
                         </motion.div>
                     </div>
 
-                    {/* ════════════ RIGHT COLUMN ════════════ */}
                     <div className="space-y-5">
 
                         {/* My Card */}
@@ -477,7 +465,6 @@ const SuperAdminDashboard = () => {
                         </motion.div>
 
                     </div>
-                    {/* ════════════ END RIGHT COLUMN ════════════ */}
                 </div>
             </div>
         </div>

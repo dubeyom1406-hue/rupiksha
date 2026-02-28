@@ -228,14 +228,14 @@ const RetailerDashboard = () => {
             <div className="dash-root min-h-screen bg-[#F5F7FA] p-3 md:p-4">
 
                 {/* ── TOP BAR ── */}
-                <div className="flex items-center justify-between mb-2">
-                    <h1 className="text-[22px] font-bold text-[#1a1a2e]">Overview</h1>
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                    <h1 className="text-[18px] md:text-[22px] font-bold text-[#1a1a2e] shrink-0">Overview</h1>
+                    <div className="flex items-center gap-2">
+                        <div className="relative hidden sm:block">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 placeholder="Search"
-                                className="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-56 shadow-sm"
+                                className="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-600 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-40 md:w-56 shadow-sm"
                             />
                         </div>
                         <button className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-500 hover:bg-slate-50">
@@ -432,41 +432,41 @@ const RetailerDashboard = () => {
                         {/* ── ROW 3: All Transactions ── */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                             {/* Head */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-                                <h2 className="text-base font-bold text-[#1a1a2e]">All Transactions</h2>
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-slate-50 gap-2">
+                                <h2 className="text-base font-bold text-[#1a1a2e] shrink-0">All Transactions</h2>
+                                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
                                     {['History', 'Completed', 'Pending', 'Failed'].map(tab => (
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTxTab(tab)}
-                                            className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all ${activeTxTab === tab ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+                                            className={`text-[10px] md:text-[11px] font-semibold px-2 md:px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${activeTxTab === tab ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
                                             {tab}
                                         </button>
                                     ))}
-                                    <button className="ml-1 text-slate-400 hover:text-slate-600"><Filter size={15} /></button>
+                                    <button className="ml-1 text-slate-400 hover:text-slate-600 shrink-0"><Filter size={15} /></button>
                                 </div>
                             </div>
 
                             {/* Rows */}
                             <div className="divide-y divide-slate-50">
                                 {transactions.length > 0 ? transactions.map((t, i) => (
-                                    <div key={i} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors">
+                                    <div key={i} className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 hover:bg-slate-50/60 transition-colors">
                                         {/* Avatar */}
-                                        <div className="w-9 h-9 rounded-full bg-slate-900 flex-shrink-0 flex items-center justify-center text-white text-[10px] font-black overflow-hidden border border-slate-100">
+                                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-slate-900 flex-shrink-0 flex items-center justify-center text-white text-[10px] font-black overflow-hidden border border-slate-100">
                                             {t.service?.charAt(0) || 'T'}
                                         </div>
                                         {/* Name / type */}
-                                        <div className="min-w-0">
-                                            <p className="text-[13px] font-bold text-slate-800 truncate">{t.service}</p>
-                                            <p className="text-[10px] text-slate-400">TXN: {t.id}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[12px] md:text-[13px] font-bold text-slate-800 truncate">{t.service}</p>
+                                            <p className="text-[9px] md:text-[10px] text-slate-400 truncate">TXN: {t.id}</p>
                                         </div>
                                         {/* Date */}
-                                        <p className="text-[11px] text-slate-400 hidden sm:block">{new Date(t.timestamp).toLocaleDateString()}</p>
+                                        <p className="text-[11px] text-slate-400 hidden sm:block shrink-0">{new Date(t.timestamp).toLocaleDateString()}</p>
                                         {/* Time */}
-                                        <p className="text-[11px] text-slate-400 hidden md:block">{new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        <p className="text-[11px] text-slate-400 hidden md:block shrink-0">{new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         {/* Amount */}
-                                        <p className="text-[13px] font-black text-slate-800">₹{t.amount}</p>
+                                        <p className="text-[12px] md:text-[13px] font-black text-slate-800 shrink-0">₹{t.amount}</p>
                                         {/* Status */}
                                         <Badge color={t.status === 'SUCCESS' ? 'emerald' : t.status === 'FAILED' ? 'rose' : 'amber'}>{t.status}</Badge>
                                     </div>

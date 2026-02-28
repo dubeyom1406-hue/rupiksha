@@ -14,6 +14,13 @@ Ab humein alag se koi config file banane ki zaroorat nahi hai (v4 ka naya featur
   background-color: #f7f9fc;
 }
 
+/* ── GLOBAL MOBILE FIXES ── */
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  /* Prevent font scaling on orientation change in iOS */
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -21,4 +28,53 @@ body {
   font-weight: 700;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  /* Safe area for notched phones */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── PREVENT HORIZONTAL OVERFLOW GLOBALLY ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ── SCROLLBAR UTILITIES ── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── MOBILE TOUCH IMPROVEMENTS ── */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── RESPONSIVE TABLE WRAPPER ── */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── LANDING PAGE: Hide card deck on mobile ── */
+@media (max-width: 768px) {
+  .rp-services-right {
+    display: none !important;
+  }
+  .rp-services-sticky {
+    flex-direction: column !important;
+    gap: 20px !important;
+    padding: 60px 5% 0 !important;
+  }
+}
+
+/* ── SAFE AREA: Bottom nav clearance ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 4rem);
+  }
 }

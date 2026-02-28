@@ -39,7 +39,6 @@ const PanVerification = () => {
                 });
             }
         } catch (error) {
-            console.error("PAN Verification Error:", error);
             setResult({
                 success: false,
                 message: `Server Connection Failed: ${error.message}. Please try again later.`

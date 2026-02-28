@@ -14,14 +14,10 @@ import {
 import { initSpeech, announceSuccess, announceFailure, announceProcessing, speak, announceError, announceWarning, announceGrandSuccess, playApplause } from '../../services/speechService';
 import UtilityBill from './UtilityBill';
 
-/* ── Constants ── */
 const NAVY = '#0f2557';
 const NAVY2 = '#1a3a6b';
 const NAVY3 = '#2257a8';
 
-/* ══════════════════════════════════════════════════════════════════
-   🏆 GRAND SUCCESS SCREEN — reusable for ANY success on the website
-   ══════════════════════════════════════════════════════════════════ */
 function GrandSuccessScreen({ title, subtitle, details = [], onReset, resetLabel = '+ New Transaction' }) {
     // Bokeh floating dots
     const DOTS = [
@@ -652,7 +648,7 @@ function BillTab() {
                     opcode: opCode,
                     category: category?.id,
                     subDiv: '',
-                    dob: dob,
+                    dob: dob ? dob.replace(/-/g, '/') : '',
                     mobile: user?.mobile || '9999999999'
                 })
             });
@@ -698,7 +694,7 @@ function BillTab() {
                     amount: fetchedBill.amount,
                     category: category?.id,
                     opcode: billerOpcode,
-                    dob: dob,
+                    dob: dob ? dob.replace(/-/g, '/') : '',
                     mobile: user?.mobile || '9999999999'
                 })
             });
@@ -717,7 +713,6 @@ function BillTab() {
                 setStatus({ type: 'error', message: `❌ ${result.message || 'Payment failed'}` });
             }
         } catch (err) {
-            console.error('Payment Error:', err);
         }
         setPaying(false);
     };
@@ -846,23 +841,28 @@ function BillTab() {
                         {category?.id === 'insurance' && (
                             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
-                                    <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth (DDMMYYYY)
+                                    <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth
                                 </label>
                                 <div className="relative">
-                                    <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input value={dob}
+                                    <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                                    <input
+                                        type="date"
+                                        value={dob}
                                         onChange={e => {
-                                            const val = e.target.value.replace(/\D/g, '').slice(0, 8);
-                                            setDob(val);
-                                            if (val.length === 8 && consumerNo.length >= 6) {
+                                            setDob(e.target.value); // Store as YYYY-MM-DD (native)
+                                            const [yyyy, mm, dd] = (e.target.value || '').split('-');
+                                            const ddmmyyyy = dd && mm && yyyy ? `${dd}${mm}${yyyy}` : '';
+                                            // Trigger auto-fetch when DOB is fully entered
+                                            if (ddmmyyyy.length === 8 && consumerNo.length >= 6) {
                                                 clearTimeout(autoTimer.current);
                                                 autoTimer.current = setTimeout(() => { doFetch(); }, 500);
                                             }
                                         }}
-                                        placeholder="DDMMYYYY (e.g. 15081947)"
-                                        className="w-full pl-9 pr-4 py-3.5 rounded-xl border-2 border-slate-200 text-slate-900 font-bold text-sm outline-none focus:border-emerald-500 bg-emerald-50/20 transition-all border-emerald-100" />
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="w-full pl-9 pr-4 py-3.5 rounded-xl border-2 border-emerald-100 text-slate-900 font-bold text-sm outline-none focus:border-emerald-500 bg-emerald-50/20 transition-all"
+                                    />
                                 </div>
-                                <p className="text-[9px] text-slate-400 mt-1">Note: Enter DOB in DDMMYYYY format for Insurance fetch.</p>
+                                <p className="text-[9px] text-slate-400 mt-1">📅 Select date using the date picker — sent as YYYY/MM/DD format.</p>
                             </motion.div>
                         )}
                     </div>
@@ -1121,7 +1121,6 @@ function PanTab() {
     );
 }
 
-/* ═══════════ MAIN UTILITY COMPONENT ═══════════ */
 export default function Utility() {
     const [tab, setTab] = useState('mobile');
     const [user, setUser] = useState(null);

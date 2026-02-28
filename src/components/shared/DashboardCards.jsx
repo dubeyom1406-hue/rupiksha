@@ -87,7 +87,6 @@ export default function DashboardCards({ territory }) {
       setTopbar(topbarData);
       setLastUpdated(new Date());
     } catch (err) {
-      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -95,8 +94,8 @@ export default function DashboardCards({ territory }) {
 
   useEffect(() => {
     fetchData();
-    // Live refresh every 5 seconds
-    const interval = setInterval(fetchData, 5000);
+    // Live refresh every 15 seconds (optimized for performance)
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [effectiveTerritory]);
 

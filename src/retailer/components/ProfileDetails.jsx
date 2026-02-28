@@ -178,7 +178,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                 throw new Error(data.message || "Failed to send OTP");
             }
         } catch (error) {
-            console.error("OTP Error:", error);
             setIsSendingOtp(false);
 
             // Show meaningful error to user
@@ -212,7 +211,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                 setIsVerifying(false);
             }
         } catch (error) {
-            console.error("Verification Error:", error);
             alert("Verification Failed. Check your connection.");
             setIsVerifying(false);
         }
@@ -252,7 +250,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                 alert(`${errorMsg}${errorCode}`);
             }
         } catch (error) {
-            console.error("PAN Verification Error:", error);
             alert(`Verification Failed: ${error.message}. Please check your connection and ensure the server is running on port 5001.`);
         } finally {
             setIsVerifyingPan(false);
@@ -284,7 +281,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                 alert(result.message || "UPI verification failed. Please check the ID.");
             }
         } catch (error) {
-            console.error("UPI Verification Error:", error);
             alert(`Verification Failed: ${error.message}. Please check your connection.`);
         } finally {
             setIsVerifyingUpi(false);
@@ -319,8 +315,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                     }));
                 }
             } catch (err) {
-                console.error("Account verification failed", err);
-            } finally {
                 setIsVerifyingAccount(false);
             }
         }
@@ -359,8 +353,6 @@ const ProfileDetails = ({ activeTab = 'personal' }) => {
                     }
                 }
             } catch (error) {
-                console.error("IFSC Fetch failed", error);
-            } finally {
                 setIsFetchingIFSC(false);
             }
         }

@@ -4,7 +4,7 @@ import {
     Zap, Droplets, Flame, Wifi, Phone, Shield, CreditCard,
     Building2, Search, CheckCircle, AlertCircle, RefreshCw,
     ArrowRight, Receipt, Download, X, ChevronRight, Clock,
-    Hash, User as UserIcon, Calendar, Banknote, Star, TrendingUp, Activity
+    Hash, User as UserIcon, Calendar, Banknote, Star, TrendingUp, Activity, Mail
 } from 'lucide-react';
 import { dataService, BACKEND_URL } from '../../services/dataService';
 import { BILL_CATEGORIES as BILL_CATEGORIES_DATA } from './utilityData';
@@ -36,8 +36,6 @@ const VENUS_ERRORS = {
     "IRT": "Invalid Response Type", "TAB": "Transaction Amount Temporarily Barred"
 };
 
-/* ─────────────────────── CATEGORIES ─────────────────────── */
-// Icon map for each category id
 const CAT_ICON_MAP = {
     electricity: { icon: Zap, emoji: '⚡', color: '#f59e0b', bg: 'linear-gradient(135deg, #f59e0b, #d97706)' },
     water: { icon: Droplets, emoji: '💧', color: '#3b82f6', bg: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
@@ -178,7 +176,6 @@ const _DUMMY_PLACEHOLDER = [
     },
 ]; // end _DUMMY_PLACEHOLDER (unused — real data comes from BILL_CATEGORIES_DATA)
 
-/* ─────────────────────── HELPER COMPONENTS ─────────────────────── */
 const Toast = ({ status, onClose }) => status ? (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
         className="flex items-center gap-3 p-3.5 rounded-xl mb-4 text-sm font-semibold"
@@ -267,7 +264,6 @@ function ReceiptModal({ bill, biller, category, txId, onClose }) {
     );
 }
 
-/* ─────────────────────── MAIN COMPONENT ─────────────────────── */
 export default function UtilityBill() {
     /* ── Step: category → biller → consumer → fetched → paid ── */
     const [step, setStep] = useState('category'); // 'category' | 'form' | 'fetched' | 'success'
@@ -283,6 +279,7 @@ export default function UtilityBill() {
     const [paying, setPaying] = useState(false);
     const [status, setStatus] = useState(null);
     const [dob, setDob] = useState(''); // Added for Insurance
+    const [insuranceEmail, setInsuranceEmail] = useState(''); // Optional email for Insurance
     const [txId, setTxId] = useState('');
     const [showReceipt, setShowReceipt] = useState(false);
     const [backendStatus, setBackendStatus] = useState('unknown'); // 'online' | 'offline' | 'unknown'
@@ -342,7 +339,6 @@ export default function UtilityBill() {
 
         // ── FINAL CLIENT-SIDE BLOCK FOR 'NONE' ──
         if (normalizedOp === 'NONE' || normalizedOp === '' || !normalizedOp) {
-            console.error("[BBPS] Blocked attempt to fetch with NONE/Empty opcode");
             setStatus({ type: 'error', message: '⚠️ Selected provider has no valid API code (NONE). Please choose a different one.' });
             return;
         }
@@ -360,10 +356,11 @@ export default function UtilityBill() {
                     biller: biller.name || biller,
                     consumerNo,
                     opcode: opCode,
-                    category: selectedCat, // Added missing category
+                    category: selectedCat,
                     subDiv: subDiv || '',
-                    dob: dob || '',
-                    mobile: userMobile
+                    dob: dob ? dob.replace(/-/g, '/') : '',
+                    mobile: userMobile,
+                    email: insuranceEmail || ''
                 })
             });
             const data = await res.json();
@@ -414,8 +411,9 @@ export default function UtilityBill() {
                     category: selectedCat,
                     opcode: biller.opcode || 'UBE',
                     subDiv,
-                    dob, // Pass DOB
+                    dob: dob ? dob.replace(/-/g, '/') : '',
                     mobile: billMobile,
+                    email: insuranceEmail || '',
                     orderId: fetchedBill.orderId
                 })
             });
@@ -432,7 +430,7 @@ export default function UtilityBill() {
                         origin: { y: 0.55 },
                         colors: ['#10b981', '#0f2557', '#fbbf24', '#a78bfa', '#38bdf8']
                     });
-                } catch (e) { console.log("Confetti skip", e); }
+                } catch (e) { }
 
                 setTxId(data.txid || ('BPAY' + Date.now()));
 
@@ -465,7 +463,6 @@ export default function UtilityBill() {
                 });
             }
         } catch (err) {
-            console.error("Pay Error:", err);
             setStatus({
                 type: 'error',
                 message: '⚠️ Connection Error: Failed to process payment. Please check your internet or try again later.'
@@ -483,6 +480,7 @@ export default function UtilityBill() {
         setBillerSearch('');
         setConsumerNo('');
         setDob(''); // Clear DOB
+        setInsuranceEmail(''); // Clear email
         setFetchedBill(null);
         setStatus(null);
         setShowReceipt(false);
@@ -719,37 +717,53 @@ export default function UtilityBill() {
                                             </div>
                                         </div>
 
-                                        {/* Date of Birth - Only for Insurance */}
+                                        {/* Date of Birth + Email — Only for Insurance */}
                                         {selectedCat === 'insurance' && (
-                                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
-                                                    <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth (DDMMYYYY)
-                                                </label>
-                                                <div className="relative">
-                                                    <Calendar size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        value={dob}
-                                                        onChange={e => {
-                                                            let val = e.target.value.replace(/\D/g, '').slice(0, 8);
-                                                            // Auto-format to DD-MM-YYYY
-                                                            let formatted = val;
-                                                            if (val.length > 2 && val.length <= 4) {
-                                                                formatted = `${val.slice(0, 2)}-${val.slice(2)}`;
-                                                            } else if (val.length > 4) {
-                                                                formatted = `${val.slice(0, 2)}-${val.slice(2, 4)}-${val.slice(4)}`;
-                                                            }
-                                                            setDob(formatted);
-
-                                                            if (formatted.length === 10 && consumerNo.length >= 6 && billMobile.length === 10) {
-                                                                clearTimeout(autoTimer.current);
-                                                                autoTimer.current = setTimeout(() => { doFetch(); }, 500);
-                                                            }
-                                                        }}
-                                                        placeholder="DD-MM-YYYY (e.g. 15-08-1947)"
-                                                        className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 text-slate-900 font-bold text-sm outline-none focus:border-emerald-400 bg-slate-50 focus:bg-white transition-all border-emerald-50"
-                                                    />
+                                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                                                {/* DOB — date picker */}
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
+                                                        <Calendar size={12} className="text-emerald-500" /> Policy Holder Date of Birth <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Calendar size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                                                        <input
+                                                            type="date"
+                                                            value={dob}
+                                                            max={new Date().toISOString().split('T')[0]}
+                                                            onChange={e => {
+                                                                setDob(e.target.value);
+                                                                // Extract DDMMYYYY for validation check
+                                                                const [y, m, d] = (e.target.value || '').split('-');
+                                                                const ddmmyyyy = d && m && y ? `${d}${m}${y}` : '';
+                                                                if (ddmmyyyy.length === 8 && consumerNo.length >= 6 && billMobile.length === 10) {
+                                                                    clearTimeout(autoTimer.current);
+                                                                    autoTimer.current = setTimeout(() => { doFetch(); }, 600);
+                                                                }
+                                                            }}
+                                                            className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-emerald-100 text-slate-900 font-bold text-sm outline-none focus:border-emerald-400 bg-emerald-50/20 focus:bg-white transition-all"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[9px] text-slate-400 mt-1">📅 Select DOB using the date picker (required for insurance fetch)</p>
                                                 </div>
-                                                <p className="text-[10px] text-slate-400 mt-1">Must be exactly 10 characters in DD-MM-YYYY format.</p>
+
+                                                {/* Email — optional */}
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-2">
+                                                        <Mail size={12} className="text-blue-400" /> Policy Holder Email <span className="text-slate-300 font-normal normal-case">(optional)</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type="email"
+                                                            value={insuranceEmail}
+                                                            onChange={e => setInsuranceEmail(e.target.value)}
+                                                            placeholder="name@email.com (optional)"
+                                                            className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 text-slate-900 font-bold text-sm outline-none focus:border-blue-400 bg-slate-50 focus:bg-white transition-all"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[9px] text-slate-400 mt-1">📧 Leave blank if email not available</p>
+                                                </div>
                                             </motion.div>
                                         )}
 

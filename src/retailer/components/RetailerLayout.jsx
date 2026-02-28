@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import MobileBottomNav from './MobileBottomNav';
 import { dataService } from '../../services/dataService';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -42,6 +43,11 @@ const RetailerLayout = () => {
         window.addEventListener('dataUpdated', updateData);
         return () => window.removeEventListener('dataUpdated', updateData);
     }, []);
+
+    // Close sidebar on route change (mobile)
+    useEffect(() => {
+        setShowMobileSidebar(false);
+    }, [location.pathname]);
 
     const handleTabChange = (tab) => {
         const routes = {
@@ -93,7 +99,8 @@ const RetailerLayout = () => {
                     }}
                     onMenuClick={() => setShowMobileSidebar(!showMobileSidebar)}
                 />
-                <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                {/* pb-16 lg:pb-0 ensures content not hidden behind mobile bottom nav */}
+                <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 pb-16 lg:pb-0">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -108,6 +115,9 @@ const RetailerLayout = () => {
                     </AnimatePresence>
                 </main>
             </div>
+
+            {/* Mobile Bottom Navigation — visible only on < lg screens */}
+            <MobileBottomNav />
         </div>
     );
 };

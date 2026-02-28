@@ -128,7 +128,7 @@ const AEPS = () => {
 
         dataService.verifyLocation()
             .then(loc => setLocation(loc))
-            .catch(err => console.error(err));
+            .catch(err => {});
     }, []);
 
     const TAB_COLORS = { withdrawal: '#3b82f6', balance: '#10b981', statement: '#8b5cf6', aadhaar_pay: '#f59e0b' };

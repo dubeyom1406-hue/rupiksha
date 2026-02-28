@@ -134,6 +134,19 @@ const Admin = () => {
             });
 
             if (newSA) {
+                // Send Credentials Email
+                try {
+                    await dataService.resendCredentials({
+                        email: saForm.email,
+                        name: saForm.name,
+                        mobile: saForm.mobile,
+                        password: saForm.password,
+                        role: 'SUPER_ADMIN'
+                    });
+                } catch (emailErr) {
+                    console.error("Credentials email failed:", emailErr);
+                }
+
                 setShowSuccessView(true);
                 await refreshData();
                 setShowAddSAModal(false);
@@ -178,6 +191,19 @@ const Admin = () => {
             }, distForm.ownerId || null);
 
             if (newDist) {
+                // Send Credentials Email
+                try {
+                    await dataService.resendCredentials({
+                        email: distForm.email,
+                        name: distForm.name,
+                        mobile: distForm.mobile,
+                        password: distForm.password,
+                        role: 'DISTRIBUTOR'
+                    });
+                } catch (emailErr) {
+                    console.error("Credentials email failed:", emailErr);
+                }
+
                 setShowSuccessView(true);
                 refreshData();
                 setShowAddDistModal(false);
@@ -217,8 +243,8 @@ const Admin = () => {
             setSuperadmins(sas);
 
             // Sync with sharedDataService for other components
-            sharedDataService.saveDistributors(dists);
-            sharedDataService.saveSuperAdmins(sas);
+            sharedDataService.saveDistributors(dists, true);
+            sharedDataService.saveSuperAdmins(sas, true);
 
             const trash = await dataService.getTrashUsers();
             setTrashUsers(trash);

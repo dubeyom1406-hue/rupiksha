@@ -8,12 +8,13 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+// port 5008 matches the Vite proxy configuration
+const PORT = process.env.PORT || 5008;
 const JWT_SECRET = process.env.JWT_SECRET || "rupiksha_secret_key_change_this";
 
 // ─── Nodemailer Setup ──────────────────────────────────────────────────────
@@ -34,16 +35,111 @@ const otpStore = new Map();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// ─── DB Connection ─────────────────────────────────────────────────────────
-const db = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "password",
-  database: process.env.DB_NAME || "rupiksha",
-  waitForConnections: true,
-  connectionLimit: 10,
+// --- In-Memory Data Store (Replaces Database) ---
+const memoryStore = {
+  users: [
+    {
+      id: 1,
+      username: 'admin',
+      password_hash: '$2a$10$8K9Vp2P5Qh5v5k5k5k5k5u5u5u5u5u5u5u5u5u5u5u5u5u5u5u5u5', // Placeholder for admin123 (hashed below)
+      full_name: 'Super Admin',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      balance: 1000000
+    },
+    {
+      id: 2,
+      username: 'retailer',
+      password_hash: '', // will hash on start
+      full_name: 'Premium Retailer',
+      role: 'RETAILER',
+      status: 'ACTIVE',
+      balance: 24500
+    },
+    {
+      id: 3,
+      username: 'nat_head',
+      password_hash: '',
+      full_name: 'Ravi Sharma',
+      role: 'NATIONAL_HEADER',
+      status: 'ACTIVE',
+      balance: 0
+    },
+    {
+      id: 4,
+      username: 'state_mh',
+      password_hash: '',
+      full_name: 'Ajit Patil',
+      role: 'STATE_HEADER',
+      status: 'ACTIVE',
+      balance: 0
+    }
+  ],
+  wallets: [
+    { user_id: 1, balance: 1000000 },
+    { user_id: 2, balance: 24500 },
+    { user_id: 3, balance: 0 },
+    { user_id: 4, balance: 0 }
+  ],
+  transactions: [],
+  permissions: [],
+  locations: [],
+  otpStore: new Map()
+};
+
+// Initialize hashes for mock users
+(async () => {
+  const adminHash = await bcrypt.hash('admin123', 10);
+  const pass123Hash = await bcrypt.hash('password123', 10);
+  const retailerHash = await bcrypt.hash('retailer123', 10);
+
+  memoryStore.users[0].password_hash = adminHash;
+  memoryStore.users[1].password_hash = retailerHash;
+  memoryStore.users[2].password_hash = pass123Hash;
+  memoryStore.users[3].password_hash = pass123Hash;
+})();
+
+// register endpoint
+app.post('/api/register', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const { name, mobile, email, password, role, businessName, state } = payload;
+    const username = mobile || email;
+    if (!username) return res.status(400).json({ success: false, error: "Mobile or Email required" });
+
+    const existing = memoryStore.users.find(u => u.username === username);
+    if (existing) return res.json({ success: false, message: 'User already exists' });
+
+    const hashedPassword = await bcrypt.hash(password || 'retailer123', 10);
+    const newUser = {
+      id: Date.now(),
+      username,
+      password_hash: hashedPassword,
+      full_name: name,
+      phone: mobile,
+      email,
+      address: businessName,
+      role: role || 'MEMBER',
+      territory: state,
+      status: 'ACTIVE',
+      created_at: new Date()
+    };
+    memoryStore.users.push(newUser);
+    memoryStore.wallets.push({ user_id: newUser.id, balance: 0 });
+
+    return res.json({
+      success: true,
+      message: 'User registered successfully',
+      userId: newUser.id
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Server error during registration" });
+  }
 });
+
+
+// DB Connection Removed
+console.log("ℹ️ Database removed. Using In-Memory Storage.");
 
 // ─── Auth Middleware ────────────────────────────────────────────────────────
 const authMiddleware = (req, res, next) => {
@@ -65,32 +161,25 @@ const adminOnly = (req, res, next) => {
 // ─── AUTH ROUTES ────────────────────────────────────────────────────────────
 
 // POST /api/auth/login
+// POST /api/auth/login
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    const [rows] = await db.query(
-      "SELECT * FROM users WHERE username = ? AND status = 'ACTIVE'",
-      [username]
-    );
-    if (!rows.length) return res.status(401).json({ error: "Invalid credentials" });
+    const user = memoryStore.users.find(u => u.username === username || u.phone === username);
 
-    const user = rows[0];
+    if (!user || user.status === 'INACTIVE') {
+      return res.status(401).json({ error: "Invalid credentials or account inactive" });
+    }
+
     const validPass = await bcrypt.compare(password, user.password_hash);
     if (!validPass) return res.status(401).json({ error: "Invalid credentials" });
 
-    // Get permissions
-    const [perms] = await db.query(
-      "SELECT module_name as module, action_name as action, is_allowed as allowed FROM permissions WHERE user_id = ?",
-      [user.id]
-    );
-
-    // Update last login
-    await db.query("UPDATE users SET last_login = NOW() WHERE id = ?", [user.id]);
+    const wallet = memoryStore.wallets.find(w => w.user_id === user.id);
+    const perms = memoryStore.permissions.filter(p => p.user_id === user.id);
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, territory: user.territory },
-      JWT_SECRET,
-      { expiresIn: "8h" }
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET, { expiresIn: "8h" }
     );
 
     res.json({
@@ -100,23 +189,126 @@ app.post("/api/auth/login", async (req, res) => {
         id: user.id,
         username: user.username,
         name: user.full_name,
+        mobile: user.phone,
+        email: user.email,
         role: user.role,
-        territory: user.territory,
-        photo: user.photo_url,
+        balance: wallet ? wallet.balance : 0,
         permissions: perms,
       },
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error during login" });
   }
 });
 
 // Alias for /api/login (Frontend compatibility)
 app.post("/api/login", async (req, res) => {
-  // Re-use logic or redirect to /api/auth/login logic
-  // For simplicity, we just alias it here
-  return app._router.handle({ method: 'POST', url: '/api/auth/login', body: req.body, headers: req.headers }, res);
+  const { username, password } = req.body;
+  const user = memoryStore.users.find(u => u.username === username || u.phone === username);
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+  const validPass = await bcrypt.compare(password, user.password_hash);
+  if (!validPass) return res.status(401).json({ error: "Invalid credentials" });
+
+  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: "8h" });
+  res.json({ success: true, token, user: { ...user, name: user.full_name, mobile: user.phone, balance: memoryStore.wallets.find(w => w.user_id === user.id)?.balance || 0 } });
+});
+
+// ─── ADMIN & USER MANAGEMENT ROUTES ──────────────────────────────────────────
+
+// GET /api/all-users
+app.get("/api/all-users", async (req, res) => {
+  const users = memoryStore.users.filter(u => u.status !== 'TRASH').map(u => {
+    const w = memoryStore.wallets.find(wallet => wallet.user_id === u.id);
+    return { ...u, name: u.full_name, mobile: u.phone, balance: w ? w.balance : 0 };
+  });
+  res.json({ success: true, users });
+});
+
+// GET /api/trash-users
+app.get("/api/trash-users", async (req, res) => {
+  const users = memoryStore.users.filter(u => u.status === 'TRASH');
+  res.json({ success: true, users });
+});
+
+// POST /api/delete-user
+app.post("/api/delete-user", async (req, res) => {
+  const { username } = req.body;
+  const user = memoryStore.users.find(u => u.username === username || u.phone === username);
+  if (user) user.status = 'TRASH';
+  res.json({ success: true });
+});
+
+// POST /api/restore-user
+app.post("/api/restore-user", async (req, res) => {
+  const { username } = req.body;
+  const user = memoryStore.users.find(u => u.username === username || u.phone === username);
+  if (user) user.status = 'ACTIVE';
+  res.json({ success: true });
+});
+
+// POST /api/approve-user
+app.post("/api/approve-user", async (req, res) => {
+  const { username, password, status, partyCode, parent_id } = req.body;
+  const user = memoryStore.users.find(u => u.username === username || u.phone === username);
+  if (user) {
+    if (status) user.status = status;
+    if (password) user.password_hash = await bcrypt.hash(password, 10);
+    if (partyCode) user.partyCode = partyCode;
+    if (parent_id) user.created_by = parent_id;
+  }
+  res.json({ success: true });
+});
+
+// POST /api/update-user-role
+app.post("/api/update-user-role", async (req, res) => {
+  const { username, newRole } = req.body;
+  const user = memoryStore.users.find(u => u.username === username || u.phone === username);
+  if (user) user.role = newRole;
+  res.json({ success: true });
+});
+
+// ─── WALLET & TRANSACTION ROUTES ─────────────────────────────────────────────
+
+// POST /api/get-balance
+app.post("/api/get-balance", async (req, res) => {
+  const { userId } = req.body;
+  const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
+  const w = memoryStore.wallets.find(wallet => wallet.user_id === (user ? user.id : -1));
+  res.json({ success: true, balance: w ? w.balance : "0.00" });
+});
+
+// GET /api/transactions
+app.get("/api/transactions", async (req, res) => {
+  const { userId } = req.query;
+  const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
+  const txns = memoryStore.transactions.filter(t => t.user_id === (user ? user.id : -1));
+  res.json({ success: true, transactions: txns.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
+});
+
+// GET /api/all-transactions
+app.get("/api/all-transactions", async (req, res) => {
+  res.json({ success: true, transactions: memoryStore.transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
+});
+
+// GET /api/kyc-status
+app.get("/api/kyc-status", async (req, res) => {
+  const { userId } = req.query;
+  const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
+  const docs = [
+    { name: 'Profile KYC', status: user ? user.profile_kyc_status : 'NOT_DONE' },
+    { name: 'AEPS KYC', status: user ? user.aeps_kyc_status : 'NOT_DONE' }
+  ];
+  res.json({ success: true, documents: docs });
+});
+
+// GET /api/portal-config
+app.get("/api/portal-config", (req, res) => {
+  res.json({ success: true, config: { maintenance: false, notice: "Welcome to Rupiksha!" } });
+});
+
+// GET /api/commissions
+app.get("/api/commissions", (req, res) => {
+  res.json({ success: true, commissions: [] });
 });
 
 // POST /api/auth/logout
@@ -129,170 +321,217 @@ app.post("/api/auth/logout", authMiddleware, (req, res) => {
 
 // GET /api/dashboard/topbar
 app.get("/api/dashboard/topbar", authMiddleware, async (req, res) => {
-  try {
-    // Aapke existing queries yahan lagao
-    // Example structure:
-    const territory = req.user.territory || "india";
-    const whereClause = territory === "india" ? "" : "WHERE territory = ?";
-    const params = territory === "india" ? [] : [territory];
-
-    const [[charges]] = await db.query(
-      `SELECT COALESCE(SUM(amount),0) as total FROM charges ${whereClause}`, params
-    );
-    const [[commission]] = await db.query(
-      `SELECT COALESCE(SUM(amount),0) as total FROM commissions ${whereClause}`, params
-    );
-    const [[wallet]] = await db.query(
-      `SELECT COALESCE(SUM(balance),0) as total FROM wallets ${whereClause}`, params
-    );
-
-    res.json({
-      charges: charges.total,
-      commission: commission.total,
-      wallet: wallet.total,
-    });
-  } catch (err) {
-    console.error(err);
-    // Return mock data if DB not set up
-    res.json({ charges: 0, commission: 0, wallet: 0 });
-  }
+  const totalWallet = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.balance) || 0), 0);
+  const totalCommission = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => acc + (parseFloat(t.commission) || 0), 0);
+  const totalCharges = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => acc + (parseFloat(t.charges) || 0), 0);
+  res.json({ charges: totalCharges, commission: totalCommission, wallet: totalWallet });
 });
 
-// GET /api/dashboard/stats?territory=india
-app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
-  try {
-    const territory = req.query.territory || req.user.territory || "india";
-    const isAll = territory === "india";
-    const tParam = isAll ? [] : [territory];
-    const tWhere = isAll ? "" : "AND territory = ?";
+// GET /api/dashboard/live  — single endpoint for full live admin dashboard
+app.get("/api/dashboard/live", async (req, res) => {
+  const now = new Date();
+  const todayStr = now.toISOString().split("T")[0];
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
 
-    // Users
-    const [[users]] = await db.query(
-      `SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN status='INACTIVE' THEN 1 ELSE 0 END) as inactive
-       FROM users WHERE role='MEMBER' ${tWhere}`, tParam
-    );
+  const activeUsers = memoryStore.users.filter(u => u.status === 'ACTIVE' || u.status === 'Approved');
+  const pendingUsers = memoryStore.users.filter(u => u.status === 'Pending' || u.status === 'PENDING');
+  const totalWalletBalance = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.balance) || 0), 0);
+  const fundRequests = memoryStore.wallets.filter(w => w.status === 'PENDING').length;
+  const lockedAmount = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.locked_amount) || 0), 0);
 
-    // KYC
-    const [[kyc]] = await db.query(
-      `SELECT 
-        SUM(CASE WHEN profile_kyc_status='DONE' THEN 1 ELSE 0 END) as done,
-        SUM(CASE WHEN profile_kyc_status='NOT_DONE' THEN 1 ELSE 0 END) as notDone,
-        SUM(CASE WHEN profile_kyc_status='PENDING' THEN 1 ELSE 0 END) as pending
-       FROM users WHERE role='MEMBER' ${tWhere}`, tParam
-    );
+  const kycDone = memoryStore.users.filter(u => u.profile_kyc_status === 'DONE').length;
+  const kycNotDone = memoryStore.users.filter(u => !u.profile_kyc_status || u.profile_kyc_status === 'NOT_DONE').length;
+  const kycPending = memoryStore.users.filter(u => u.profile_kyc_status === 'PENDING').length;
+  const aepsKycDone = memoryStore.users.filter(u => u.aeps_kyc_status === 'DONE').length;
+  const aepsKycNotDone = memoryStore.users.filter(u => !u.aeps_kyc_status || u.aeps_kyc_status === 'NOT_DONE').length;
+  const aepsKycPending = memoryStore.users.filter(u => u.aeps_kyc_status === 'PENDING').length;
 
-    // AEPS KYC
-    const [[aepsKyc]] = await db.query(
-      `SELECT 
-        SUM(CASE WHEN aeps_kyc_status='DONE' THEN 1 ELSE 0 END) as done,
-        SUM(CASE WHEN aeps_kyc_status='NOT_DONE' THEN 1 ELSE 0 END) as notDone,
-        SUM(CASE WHEN aeps_kyc_status='PENDING' THEN 1 ELSE 0 END) as pending
-       FROM users WHERE role='MEMBER' ${tWhere}`, tParam
-    );
-
-    // Wallet
-    const [[wallet]] = await db.query(
-      `SELECT 
-        COALESCE(SUM(balance),0) as total,
-        COUNT(CASE WHEN status='PENDING' THEN 1 END) as fundRequest,
-        COALESCE(SUM(locked_amount),0) as locked
-       FROM wallets ${isAll ? "" : "WHERE territory = ?"}`, tParam
-    );
-
-    // Helper for transaction stats
-    const getTxnStats = async (type) => {
-      const today = new Date().toISOString().split("T")[0];
-      const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
-      const [[r]] = await db.query(
-        `SELECT 
-          SUM(CASE WHEN DATE(created_at)=? THEN 1 ELSE 0 END) as todayTxn,
-          SUM(CASE WHEN DATE(created_at)=? THEN amount ELSE 0 END) as todayAmt,
-          SUM(CASE WHEN DATE(created_at)>=? THEN 1 ELSE 0 END) as monthlyTxn,
-          SUM(CASE WHEN DATE(created_at)>=? THEN amount ELSE 0 END) as monthlyAmt,
-          SUM(CASE WHEN DATE(created_at)=? THEN commission ELSE 0 END) as todayComm,
-          SUM(CASE WHEN DATE(created_at)>=? THEN commission ELSE 0 END) as monthlyComm
-         FROM transactions 
-         WHERE type=? AND status='SUCCESS' ${tWhere}`,
-        [today, today, firstDay, firstDay, today, firstDay, type, ...tParam]
-      );
-      return r;
+  const getTxnStats = (type) => {
+    const all = memoryStore.transactions.filter(t => t.type === type && t.status === 'SUCCESS');
+    const todayTxns = all.filter(t => (t.created_at || '').startsWith(todayStr));
+    const monthlyTxns = all.filter(t => (t.created_at || '') >= monthStart);
+    return {
+      todayTxn: todayTxns.length,
+      todayAmt: todayTxns.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0),
+      monthlyTxn: monthlyTxns.length,
+      monthlyAmt: monthlyTxns.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0),
+      todayComm: todayTxns.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0),
+      monthlyComm: monthlyTxns.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0),
     };
+  };
 
-    const [aeps, payout, cms, dmt, bharatConnect, otherService] = await Promise.all([
-      getTxnStats("AEPS"),
-      getTxnStats("PAYOUT"),
-      getTxnStats("CMS"),
-      getTxnStats("DMT"),
-      getTxnStats("BHARAT_CONNECT"),
-      getTxnStats("OTHER"),
-    ]);
+  const totalCommission = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((s, t) => s + (parseFloat(t.commission) || 0), 0);
+  const totalCharges = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((s, t) => s + (parseFloat(t.charges) || 0), 0);
 
-    res.json({ users, kyc, aepsKyc, wallet, aeps, payout, cms, dmt, bharatConnect, otherService });
-  } catch (err) {
-    console.error("Stats error:", err);
-    res.status(500).json({ error: err.message });
+  // Recent 10 transactions for activity feed
+  const recentTxns = [...memoryStore.transactions]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10)
+    .map(t => {
+      const user = memoryStore.users.find(u => u.id === t.user_id || u.username === t.user_id);
+      return { ...t, userName: user?.full_name || user?.username || 'Unknown User' };
+    });
+
+  res.json({
+    serverTime: now.toISOString(),
+    charges: totalCharges,
+    commission: totalCommission,
+    wallet: totalWalletBalance,
+    users: {
+      total: memoryStore.users.length,
+      active: activeUsers.length,
+      pending: pendingUsers.length,
+      inactive: memoryStore.users.filter(u => u.status === 'INACTIVE').length,
+    },
+    kyc: { done: kycDone, notDone: kycNotDone, pending: kycPending },
+    aepsKyc: { done: aepsKycDone, notDone: aepsKycNotDone, pending: aepsKycPending },
+    walletStats: { total: totalWalletBalance, fundRequest: fundRequests, locked: lockedAmount },
+    aeps: getTxnStats("AEPS"),
+    payout: getTxnStats("PAYOUT"),
+    cms: getTxnStats("CMS"),
+    dmt: getTxnStats("DMT"),
+    bharatConnect: getTxnStats("BHARAT_CONNECT"),
+    otherService: getTxnStats("OTHER"),
+    recentTransactions: recentTxns,
+  });
+});
+
+// POST /api/log-txn  — record a transaction
+app.post("/api/log-txn", async (req, res) => {
+  const { userId, service, amount, operator, number, status, commission, charges } = req.body;
+  const txn = {
+    id: Date.now(),
+    user_id: userId,
+    type: (service || 'OTHER').toUpperCase(),
+    amount: parseFloat(amount) || 0,
+    operator: operator || '',
+    number: number || '',
+    status: status || 'SUCCESS',
+    commission: parseFloat(commission) || 0,
+    charges: parseFloat(charges) || 0,
+    created_at: new Date().toISOString(),
+  };
+  memoryStore.transactions.push(txn);
+
+  // Update wallet balance if success
+  if (status === 'SUCCESS') {
+    const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
+    const wallet = user ? memoryStore.wallets.find(w => w.user_id === user.id) : null;
+    if (wallet) wallet.balance = Math.max(0, (parseFloat(wallet.balance) || 0) - txn.amount);
   }
+  res.json({ success: true, txnId: txn.id });
+});
+
+// GET /api/dashboard/stats
+app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
+  const totalUsers = memoryStore.users.length;
+  const activeUsers = memoryStore.users.filter(u => u.status === 'ACTIVE').length;
+  const inactiveUsers = totalUsers - activeUsers;
+
+  const kycDone = memoryStore.users.filter(u => u.profile_kyc_status === 'DONE').length;
+  const kycNotDone = memoryStore.users.filter(u => u.profile_kyc_status === 'NOT_DONE').length;
+  const kycPending = memoryStore.users.filter(u => u.profile_kyc_status === 'PENDING').length;
+
+  const aepsKycDone = memoryStore.users.filter(u => u.aeps_kyc_status === 'DONE').length;
+  const aepsKycNotDone = memoryStore.users.filter(u => u.aeps_kyc_status === 'NOT_DONE').length;
+  const aepsKycPending = memoryStore.users.filter(u => u.aeps_kyc_status === 'PENDING').length;
+
+  const totalWalletBalance = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.balance) || 0), 0);
+  const fundRequests = memoryStore.wallets.filter(w => w.status === 'PENDING').length; // Assuming wallet status for fund requests
+  const lockedAmount = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.locked_amount) || 0), 0);
+
+  const getTxnStats = (type) => {
+    const today = new Date().toISOString().split("T")[0];
+    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+
+    const filteredTxns = memoryStore.transactions.filter(t => t.type === type && t.status === 'SUCCESS');
+
+    const todayTxn = filteredTxns.filter(t => t.created_at.startsWith(today)).length;
+    const todayAmt = filteredTxns.filter(t => t.created_at.startsWith(today)).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    const monthlyTxn = filteredTxns.filter(t => t.created_at >= firstDay).length;
+    const monthlyAmt = filteredTxns.filter(t => t.created_at >= firstDay).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    const todayComm = filteredTxns.filter(t => t.created_at.startsWith(today)).reduce((sum, t) => sum + (parseFloat(t.commission) || 0), 0);
+    const monthlyComm = filteredTxns.filter(t => t.created_at >= firstDay).reduce((sum, t) => sum + (parseFloat(t.commission) || 0), 0);
+
+    return { todayTxn, todayAmt, monthlyTxn, monthlyAmt, todayComm, monthlyComm };
+  };
+
+  const aeps = getTxnStats("AEPS");
+  const payout = getTxnStats("PAYOUT");
+  const cms = getTxnStats("CMS");
+  const dmt = getTxnStats("DMT");
+  const bharatConnect = getTxnStats("BHARAT_CONNECT");
+  const otherService = getTxnStats("OTHER");
+
+  res.json({
+    users: { total: totalUsers, active: activeUsers, inactive: inactiveUsers },
+    kyc: { done: kycDone, notDone: kycNotDone, pending: kycPending },
+    aepsKyc: { done: aepsKycDone, notDone: aepsKycNotDone, pending: aepsKycPending },
+    wallet: { total: totalWalletBalance, fundRequest: fundRequests, locked: lockedAmount },
+    aeps, payout, cms, dmt, bharatConnect, otherService
+  });
 });
 
 // ─── EMPLOYEE ROUTES ─────────────────────────────────────────────────────────
 
 // GET /api/employees
 app.get("/api/employees", authMiddleware, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, username, full_name, phone, email, address, role, 
-              territory, status, photo_url, last_login, created_at,
-              (SELECT COUNT(*) FROM users u2 WHERE u2.created_by=users.id) as totalUsers
-       FROM users 
-       WHERE role IN ('NATIONAL','STATE','REGIONAL')
-       ORDER BY created_at DESC`
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const employees = memoryStore.users.filter(u => ['NATIONAL', 'STATE', 'REGIONAL'].includes(u.role));
+  const employeesWithUserCount = employees.map(emp => {
+    const totalUsers = memoryStore.users.filter(u => u.created_by === emp.id).length;
+    return { ...emp, totalUsers };
+  });
+  res.json(employeesWithUserCount);
 });
 
 // GET /api/employees/:id
 app.get("/api/employees/:id", authMiddleware, async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [req.params.id]);
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
-    const u = rows[0];
-    delete u.password_hash;
-    res.json(u);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const user = memoryStore.users.find(u => u.id == req.params.id);
+  if (!user) return res.status(404).json({ error: "Not found" });
+  const u = { ...user }; // Create a copy to avoid modifying original in store
+  delete u.password_hash;
+  res.json(u);
 });
 
 // POST /api/employees/create
 app.post("/api/employees/create", authMiddleware, adminOnly, async (req, res) => {
-  try {
-    const { username, password, fullName, phone, email, address, role, territory } = req.body;
-    const hashedPass = await bcrypt.hash(password, 10);
-    const [result] = await db.query(
-      `INSERT INTO users (username, password_hash, full_name, phone, email, address, role, territory, status, created_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`,
-      [username, hashedPass, fullName, phone, email, address, role, territory, req.user.id]
-    );
-    res.json({ success: true, id: result.insertId, userId: result.insertId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { username, password, fullName, phone, email, address, role, territory } = req.body;
+  const hashedPass = await bcrypt.hash(password, 10);
+  const newUser = {
+    id: memoryStore.users.length > 0 ? Math.max(...memoryStore.users.map(u => u.id)) + 1 : 1, // Simple ID generation
+    username,
+    password_hash: hashedPass,
+    full_name: fullName,
+    phone,
+    email,
+    address,
+    role,
+    territory,
+    status: 'ACTIVE',
+    created_by: req.user.id,
+    created_at: new Date().toISOString(),
+    profile_kyc_status: 'NOT_DONE',
+    aeps_kyc_status: 'NOT_DONE',
+    last_login: null,
+    photo_url: null
+  };
+  memoryStore.users.push(newUser);
+  res.json({ success: true, id: newUser.id, userId: newUser.id });
 });
 
 // PUT /api/employees/:id
 app.put("/api/employees/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { fullName, phone, email, address, territory } = req.body;
-    await db.query(
-      "UPDATE users SET full_name=?, phone=?, email=?, address=?, territory=? WHERE id=?",
-      [fullName, phone, email, address, territory, req.params.id]
-    );
+    const user = memoryStore.users.find(u => u.id == req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (fullName) user.full_name = fullName;
+    if (phone) user.phone = phone;
+    if (email) user.email = email;
+    if (address) user.address = address;
+    if (territory) user.territory = territory;
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -302,10 +541,10 @@ app.put("/api/employees/:id", authMiddleware, adminOnly, async (req, res) => {
 // PUT /api/employees/:id/toggle-status
 app.put("/api/employees/:id/toggle-status", authMiddleware, adminOnly, async (req, res) => {
   try {
-    await db.query(
-      "UPDATE users SET status = CASE WHEN status='ACTIVE' THEN 'INACTIVE' ELSE 'ACTIVE' END WHERE id=?",
-      [req.params.id]
-    );
+    const user = memoryStore.users.find(u => u.id == req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.status = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -317,11 +556,9 @@ app.put("/api/employees/:id/toggle-status", authMiddleware, adminOnly, async (re
 // GET /api/employees/:id/permissions
 app.get("/api/employees/:id/permissions", authMiddleware, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      "SELECT module_name as module, action_name as action, is_allowed as allowed FROM permissions WHERE user_id=?",
-      [req.params.id]
-    );
-    res.json(rows);
+    const perms = memoryStore.permissions.filter(p => p.user_id == req.params.id)
+      .map(p => ({ module: p.module_name, action: p.action_name, allowed: p.is_allowed }));
+    res.json(perms);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -332,14 +569,20 @@ app.put("/api/employees/:id/permissions", authMiddleware, adminOnly, async (req,
   try {
     const { permissions } = req.body;
     const userId = req.params.id;
-    // Delete old permissions and insert new ones
-    await db.query("DELETE FROM permissions WHERE user_id=?", [userId]);
+
+    // Remove old permissions
+    memoryStore.permissions = memoryStore.permissions.filter(p => p.user_id != userId);
+
+    // Add new ones
     if (permissions && permissions.length > 0) {
-      const values = permissions.map(p => [userId, p.module, p.action, p.allowed]);
-      await db.query(
-        "INSERT INTO permissions (user_id, module_name, action_name, is_allowed) VALUES ?",
-        [values]
-      );
+      permissions.forEach(p => {
+        memoryStore.permissions.push({
+          user_id: parseInt(userId),
+          module_name: p.module,
+          action_name: p.action,
+          is_allowed: p.allowed
+        });
+      });
     }
     res.json({ success: true });
   } catch (err) {
@@ -353,13 +596,19 @@ app.put("/api/employees/:id/permissions", authMiddleware, adminOnly, async (req,
 app.put("/api/location/update", authMiddleware, async (req, res) => {
   try {
     const { latitude, longitude, timestamp } = req.body;
-    await db.query(
-      `INSERT INTO user_locations (user_id, latitude, longitude, recorded_at) 
-       VALUES (?,?,?,?) 
-       ON DUPLICATE KEY UPDATE latitude=?, longitude=?, recorded_at=?`,
-      [req.user.id, latitude, longitude, timestamp || new Date(),
-        latitude, longitude, timestamp || new Date()]
-    );
+    const existingIdx = memoryStore.locations.findIndex(l => l.user_id == req.user.id);
+    const locData = {
+      user_id: req.user.id,
+      latitude,
+      longitude,
+      recorded_at: timestamp || new Date()
+    };
+
+    if (existingIdx !== -1) {
+      memoryStore.locations[existingIdx] = locData;
+    } else {
+      memoryStore.locations.push(locData);
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -369,15 +618,20 @@ app.put("/api/location/update", authMiddleware, async (req, res) => {
 // GET /api/location/all (admin ko sab locations)
 app.get("/api/location/all", authMiddleware, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT ul.user_id, ul.latitude, ul.longitude, ul.recorded_at,
-              u.full_name, u.role, u.territory
-       FROM user_locations ul
-       JOIN users u ON u.id = ul.user_id
-       WHERE ul.recorded_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-       ORDER BY ul.recorded_at DESC`
-    );
-    res.json(rows);
+    const oneHourAgo = new Date(Date.now() - 3600000);
+    const locations = memoryStore.locations
+      .filter(l => new Date(l.recorded_at) > oneHourAgo)
+      .map(l => {
+        const user = memoryStore.users.find(u => u.id == l.user_id);
+        return {
+          ...l,
+          full_name: user?.full_name,
+          role: user?.role,
+          territory: user?.territory
+        };
+      })
+      .sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at));
+    res.json(locations);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -386,11 +640,8 @@ app.get("/api/location/all", authMiddleware, async (req, res) => {
 // GET /api/location/:userId
 app.get("/api/location/:userId", authMiddleware, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      "SELECT * FROM user_locations WHERE user_id=? ORDER BY recorded_at DESC LIMIT 1",
-      [req.params.userId]
-    );
-    res.json(rows[0] || null);
+    const loc = memoryStore.locations.find(l => l.user_id == req.params.userId);
+    res.json(loc || null);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

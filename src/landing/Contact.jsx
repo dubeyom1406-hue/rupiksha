@@ -61,7 +61,6 @@ const Contact = () => {
         setIsSubmitting(true);
         // Simulate API call to send to admin and email
         setTimeout(() => {
-            console.log("Message sent to Admin Dashboard and admin@rupiksha.com", formData);
             setIsSubmitting(false);
             setSubmitted(true);
             setFormData({ name: '', email: '', phone: '', subject: 'Feedback', message: '' });

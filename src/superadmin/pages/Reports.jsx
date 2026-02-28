@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Download, Calendar, Filter, FileText, IndianRupee, ArrowUpRight, ArrowDownRight, Printer } from 'lucide-react';
 
 const ReportTable = ({ title, columns, data, icon: Icon }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    // Memoize filtered data to prevent unnecessary recalculations
+    const filteredData = useMemo(() => {
+        if (!searchTerm) return data;
+        return data.filter(row => 
+            columns.some(col => 
+                String(row[col.key] || '').toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        );
+    }, [data, searchTerm, columns]);
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    const paginatedData = useMemo(() => {
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        return filteredData.slice(startIdx, startIdx + itemsPerPage);
+    }, [filteredData, currentPage]);
 
     return (
         <div className="space-y-6">
@@ -28,6 +46,8 @@ const ReportTable = ({ title, columns, data, icon: Icon }) => {
                     <input
                         type="text"
                         placeholder="Search by ID, Name or Mobile..."
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-sm transition-all"
                     />
                 </div>
@@ -55,7 +75,7 @@ const ReportTable = ({ title, columns, data, icon: Icon }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {data.length > 0 ? data.map((row, i) => (
+                            {paginatedData.length > 0 ? paginatedData.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                     {columns.map((col, j) => (
                                         <td key={j} className="px-6 py-4">
@@ -67,12 +87,33 @@ const ReportTable = ({ title, columns, data, icon: Icon }) => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={columns.length} className="px-6 py-12 text-center text-slate-400 font-bold">No records found for the selected period</td>
+                                    <td colSpan={columns.length} className="px-6 py-12 text-center text-slate-400 font-bold">No records found</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-50 bg-slate-50/50">
+                        <div className="text-[10px] font-bold text-slate-500">Page {currentPage} of {totalPages} • {filteredData.length} records</div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-slate-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-slate-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

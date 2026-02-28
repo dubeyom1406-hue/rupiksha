@@ -50,7 +50,6 @@ const Approvals = () => {
             setDistributors(dists);
             setSuperadmins(sas);
         } catch (e) {
-            console.error("Failed to fetch live data", e);
         }
         setLoading(false);
     };

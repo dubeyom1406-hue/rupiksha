@@ -639,46 +639,62 @@ public class ApiController {
 
     @PostMapping("/send-credentials")
     public ResponseEntity<?> sendCredentialsEmail(@RequestBody Map<String, String> data) {
-        System.out.println("Processing Credentials Email for: " + data.get("to") + " | Portal: " + data.get("portal_type"));
+        String to = data.get("to");
+        String name = data.get("name");
+        String loginId = data.getOrDefault("login_id", to);
+        String password = data.get("password");
+        String addedBy = data.getOrDefault("added_by", "Administrator");
+        String portalType = data.getOrDefault("portal_type", "Retailer");
+
+        System.out.println("Processing Credentials Email for: " + to + " | Portal: " + portalType);
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(emailFrom);
-            helper.setTo(data.get("to"));
-            helper.setSubject("Your Login Credentials - " + data.get("portal_type"));
+            helper.setTo(to);
+            helper.setSubject("Your Login Credentials - " + portalType);
 
             String frontendUrl = System.getProperty("FRONTEND_URL", "http://localhost:5173");
             String html = """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-                    <div style="background-color: #0c0e12; padding: 20px; text-align: center; border-radius: 12px 12px 0 0;">
-                        <h2 style="color: #ffffff; margin: 0;">RuPiKsha Credentials</h2>
+                    <div style="background-color: #0c0e12; padding: 20px; text-align: center; border-radius: 12px 12px 0 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                        <h2 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">RUPIKSHA PINTECH</h2>
                     </div>
-                    <div style="padding: 30px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px;">
-                        <p>Hello <b>%s</b>,</p>
-                        <p>Your <b>%s</b> account has been successfully created. Here are your login details:</p>
-                        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <table style="width: 100%%;">
+                    <div style="padding: 40px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px; background-color: #ffffff;">
+                        <p style="font-size: 16px;">Hello <b>%s</b>,</p>
+                        <p style="font-size: 14px; color: #64748b; line-height: 1.6;">Your <b>%s</b> account has been successfully provisioned by <b>%s</b>. You can now access your dashboard using the credentials below:</p>
+                        
+                        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 25px; margin: 30px 0;">
+                            <table style="width: 100%%; font-size: 14px;">
                                 <tr>
-                                    <td style="color: #666; width: 100px;">Login ID:</td>
-                                    <td><b>%s</b></td>
+                                    <td style="color: #64748b; padding: 8px 0; width: 40%%;">Login ID / Mobile:</td>
+                                    <td style="padding: 8px 0;"><b>%s</b></td>
                                 </tr>
                                 <tr>
-                                    <td style="color: #666;">Password:</td>
-                                    <td style="color: #d32f2f;"><b>%s</b></td>
+                                    <td style="color: #64748b; padding: 8px 0;">Access Password:</td>
+                                    <td style="padding: 8px 0; color: #ef4444;"><b>%s</b></td>
                                 </tr>
                             </table>
                         </div>
-                        <p style="text-align: center; margin-top: 30px;">
-                            <a href="%s" style="background-color: #3b82f6; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold;">Login Now</a>
-                        </p>
+                        
+                        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 30px;">For security reasons, we recommend changing your password after your first login.</p>
+                        
+                        <div style="text-align: center;">
+                            <a href="%s" style="background-color: #0f172a; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);">Login to Dashboard</a>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; text-align: center; font-size: 11px; color: #94a3b8;">
+                        <p>© 2025 RUPIKSHA FINTECH PVT LTD. All rights reserved.</p>
+                        <p>This is an automated system message. Please do not reply.</p>
                     </div>
                 </div>
-            """.formatted(data.get("name"), data.get("portal_type"), data.get("to"), data.get("password"), frontendUrl);
+            """.formatted(name, portalType, addedBy, loginId, password, frontendUrl);
 
             helper.setText(html, true);
             mailSender.send(message);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Credentials sent"));
+            return ResponseEntity.ok(Map.of("success", true, "message", "Credentials email sent successfully"));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
         }
     }

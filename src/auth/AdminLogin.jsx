@@ -77,22 +77,46 @@ const AdminLogin = () => {
     }, [timer]);
 
     /* ── Password login ── */
-    const handlePasswordLogin = (e) => {
+    const handlePasswordLogin = async (e) => {
         e.preventDefault(); setPwError('');
         const raw = captcha.replace(/\s/g, '');
         if (captchaInput.replace(/\s/g, '').toLowerCase() !== raw.toLowerCase()) {
             setPwError('Incorrect captcha. Please try again.'); genCaptcha(); setCaptchaInput(''); return;
         }
         setPwLoading(true);
-        setTimeout(() => {
+        try {
+            const res = await fetch(`${BACKEND_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, role: 'ADMIN' })
+            });
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                localStorage.setItem('rupiksha_token', data.token);
+                sessionStorage.setItem('admin_auth', 'true');
+                navigate('/admin');
+            } else {
+                // Fallback for demo/local admin if backend fails or user not found
+                if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+                    sessionStorage.setItem('admin_auth', 'true');
+                    navigate('/admin');
+                } else {
+                    setPwError(data.message || 'Invalid credentials.');
+                    genCaptcha(); setCaptchaInput('');
+                }
+            }
+        } catch (err) {
+            // Local fallback if server unreachable
             if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
                 sessionStorage.setItem('admin_auth', 'true');
                 navigate('/admin');
             } else {
-                setPwError('Invalid credentials. Please check your username and password.');
-                setPwLoading(false); genCaptcha(); setCaptchaInput('');
+                setPwError('Server connection failed.');
             }
-        }, 700);
+        } finally {
+            setPwLoading(false);
+        }
     };
 
     /* ── Send OTP (calls Java backend) ── */

@@ -5,7 +5,7 @@ import {
     CheckCircle2, AlertCircle, Clock, X,
     Eye, Wallet, Smartphone, Mail, MapPin
 } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { dataService, BACKEND_URL } from '../../services/dataService';
 import { sharedDataService } from '../../services/sharedDataService';
 
 const Retailers = () => {
@@ -29,7 +29,6 @@ const Retailers = () => {
             // Filter retailers (you might want to show all for Super Admin, or differentiate)
             setRetailers(allUsers);
         } catch (err) {
-            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -51,56 +50,79 @@ const Retailers = () => {
     const [generatedOtp, setGeneratedOtp] = useState('');
     const [verifying, setVerifying] = useState(false);
 
-    const handleInvite = async (e) => {
+    const handleDirectAdd = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(code);
-
-        const emailModule = await import('../../services/emailService');
-        const res = await emailModule.sendOTPEmail(formData.email, code, formData.name);
-
-        setLoading(false);
-        if (res.success) {
-            setShowOTPView(true);
-        } else {
-            alert("Failed to send OTP. Please check email address.");
-        }
-    };
-
-    const handleVerifyAndAdd = async () => {
-        if (otp !== generatedOtp) {
-            alert("Invalid OTP! Access Denied.");
-            return;
-        }
-
-        setVerifying(true);
         try {
-            const sa = sharedDataService.getCurrentSuperAdmin();
-            const newUser = await dataService.registerUser(formData, sa ? sa.id : 'SUPERADMIN');
+            const sa = sharedDataService.getCurrentSuperAdmin() || { id: 'ADMIN', name: 'Super Admin' };
+            const token = localStorage.getItem('rupiksha_token');
 
-            const creds = {
-                to: formData.email,
-                name: formData.name,
-                loginId: formData.mobile, // Using mobile as Login ID
-                password: formData.password,
-                addedBy: sa ? `Super Admin: ${sa.name}` : 'Super Admin',
-                portalType: 'Retailer'
-            };
+            // 1. Create User in Backend
+            const res = await fetch(`${BACKEND_URL}/employees/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    username: formData.mobile,
+                    password: formData.password,
+                    fullName: formData.name,
+                    phone: formData.mobile,
+                    email: formData.email,
+                    address: formData.city + ', ' + formData.state,
+                    role: 'MEMBER',
+                    territory: formData.state
+                })
+            });
+            const data = await res.json();
 
-            // Send Credentials Email
-            const emailModule = await import('../../services/emailService');
-            await emailModule.sendCredentialsEmail(creds);
+            if (data.success || data.userId) {
+                // 2. Send Credentials Email
+                const creds = {
+                    to: formData.email,
+                    name: formData.name,
+                    loginId: formData.mobile,
+                    password: formData.password,
+                    addedBy: sa.name || 'Super Admin',
+                    portalType: 'Retailer'
+                };
 
-            setCreatedCredentials(creds);
-            setShowSuccessView(true);
-            setShowAddModal(false);
-            setShowOTPView(false);
-            setFormData({ name: '', businessName: '', mobile: '', email: '', password: 'retailer123', state: 'Bihar', city: '' });
+                try {
+                    const emailRes = await fetch(`${BACKEND_URL}/send-credentials`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: creds.to,
+                            name: creds.name,
+                            login_id: creds.loginId,
+                            password: creds.password,
+                            added_by: creds.addedBy,
+                            portal_type: creds.portalType
+                        })
+                    });
+                    const emailData = await emailRes.json();
+                    if (emailData.success) {
+                        console.log('Credentials Emailed Successfully!');
+                    } else {
+                        console.warn('Retailer Added but Email Failed:', emailData.error || 'Unknown error');
+                    }
+                } catch (emailErr) {
+                    console.error("Email error during credential sending:", emailErr);
+                }
+
+                setCreatedCredentials(creds);
+                setShowSuccessView(true);
+                setShowAddModal(false);
+                loadData();
+            } else {
+                alert(data.error || "Failed to add retailer");
+            }
         } catch (err) {
-            alert("Error adding retailer");
+            console.error("Add Retailer Error:", err);
+            alert("Error: " + err.message);
         } finally {
-            setVerifying(false);
+            setLoading(false);
         }
     };
 
@@ -287,124 +309,61 @@ const Retailers = () => {
                             <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-800 uppercase italic tracking-tight">
-                                        {showOTPView ? 'Confirm Pin' : 'Provision Endpoint'}
+                                        Provision Endpoint
                                     </h3>
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                                        {showOTPView ? `Identity verification for ${formData.email}` : 'SuperAdmin direct allocation of retail accounts'}
+                                        SuperAdmin direct allocation of retail accounts
                                     </p>
                                 </div>
-                                <button onClick={() => { setShowAddModal(false); setShowOTPView(false); }} className="p-3 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-2xl transition-all">
+                                <button onClick={() => { setShowAddModal(false); }} className="p-3 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-2xl transition-all">
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            {!showOTPView ? (
-                                <form onSubmit={handleInvite} className="p-10 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
-                                            <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Endpoint Name" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Shop Name</label>
-                                            <input required type="text" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Business ID" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mobile No</label>
-                                            <input required type="tel" maxLength="10" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="10 Digit UID" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Email</label>
-                                            <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="system@email.com" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-5">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Zone</label>
-                                            <select value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none appearance-none font-black italic uppercase">
-                                                {['Bihar', 'UP', 'MP', 'Delhi', 'West Bengal', 'Mumbai'].map(s => <option key={s}>{s}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">City</label>
-                                            <input required type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Hub Name" />
-                                        </div>
+                            <form onSubmit={handleDirectAdd} className="p-10 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
+                                        <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Endpoint Name" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">System Password</label>
-                                        <input required type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" />
-                                    </div>
-
-                                    <div className="pt-6 sticky bottom-0 bg-white">
-                                        <button disabled={loading} type="submit" className="w-full bg-[#0d1b2e] text-white font-black py-5 rounded-2xl text-[11px] uppercase tracking-[0.25em] shadow-2xl active:scale-95 transition-all disabled:opacity-50">
-                                            {loading ? 'DISPATCHING OTP...' : 'INITIATE PROVISIONING'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : (
-                                <div className="p-10 space-y-10 text-center">
-                                    <div className="flex justify-center gap-3">
-                                        {[...Array(6)].map((_, i) => (
-                                            <input
-                                                key={i}
-                                                id={`otp-${i}`}
-                                                type="text"
-                                                maxLength="1"
-                                                value={otp[i] || ''}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    if (!/^\d*$/.test(val)) return;
-
-                                                    const newOtp = otp.split('');
-                                                    newOtp[i] = val.slice(-1);
-                                                    setOtp(newOtp.join(''));
-
-                                                    if (val && i < 5) {
-                                                        const nextInput = document.getElementById(`otp-${i + 1}`);
-                                                        if (nextInput) nextInput.focus();
-                                                    }
-                                                }}
-                                                onKeyDown={e => {
-                                                    if (e.key === 'Backspace') {
-                                                        if (!otp[i] && i > 0) {
-                                                            const prevInput = document.getElementById(`otp-${i - 1}`);
-                                                            if (prevInput) {
-                                                                prevInput.focus();
-                                                                const newOtp = otp.split('');
-                                                                newOtp[i - 1] = '';
-                                                                setOtp(newOtp.join(''));
-                                                            }
-                                                        } else {
-                                                            const newOtp = otp.split('');
-                                                            newOtp[i] = '';
-                                                            setOtp(newOtp.join(''));
-                                                        }
-                                                    }
-                                                }}
-                                                className="w-12 h-16 text-center text-2xl font-black bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-amber-500 transition-all outline-none"
-                                            />
-                                        ))}
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <button
-                                            onClick={handleVerifyAndAdd}
-                                            disabled={verifying || otp.length < 6}
-                                            className="w-full bg-emerald-500 text-white font-black py-5 rounded-2xl text-[11px] uppercase tracking-[0.25em] shadow-2xl active:scale-95 transition-all disabled:opacity-50"
-                                        >
-                                            {verifying ? 'VERIFYING...' : 'FINALIZE PROVISIONING'}
-                                        </button>
-                                        <button
-                                            onClick={() => setShowOTPView(false)}
-                                            className="text-slate-400 font-black text-[9px] uppercase tracking-widest hover:text-slate-600 transition-colors"
-                                        >
-                                            CANCEL & BACK
-                                        </button>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Shop Name</label>
+                                        <input required type="text" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Business ID" />
                                     </div>
                                 </div>
-                            )}
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Mobile No</label>
+                                        <input required type="tel" maxLength="10" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="10 Digit UID" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Email</label>
+                                        <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="system@email.com" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Zone</label>
+                                        <select value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none appearance-none font-black italic uppercase">
+                                            {['Bihar', 'UP', 'MP', 'Delhi', 'West Bengal', 'Mumbai'].map(s => <option key={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">City</label>
+                                        <input required type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" placeholder="Hub Name" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">System Password</label>
+                                    <input required type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:border-amber-500 focus:bg-white transition-all outline-none" />
+                                </div>
+
+                                <div className="pt-6 sticky bottom-0 bg-white">
+                                    <button disabled={loading} type="submit" className="w-full bg-[#0d1b2e] text-white font-black py-5 rounded-2xl text-[11px] uppercase tracking-[0.25em] shadow-2xl active:scale-95 transition-all disabled:opacity-50">
+                                        {loading ? 'PROVISIONING...' : 'INITIATE PROVISIONING'}
+                                    </button>
+                                </div>
+                            </form>
                         </motion.div>
                     </motion.div>
                 )}

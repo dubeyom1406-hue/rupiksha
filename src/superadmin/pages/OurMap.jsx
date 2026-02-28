@@ -1,32 +1,35 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF, MarkerClustererF } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { dataService } from '../../services/dataService';
 import { MapPin, Navigation, Users, Search, Compass, RefreshCcw } from 'lucide-react';
 
 import { indiaData } from '../../data/indiaData';
 
-const mapContainerStyle = {
-    height: '600px',
-    width: '100%'
-};
+// Fix for default marker icons in Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
-const defaultCenter = {
-    lat: 20.5937,
-    lng: 78.9629
-};
+const defaultCenter = [20.5937, 78.9629];
+const defaultZoom = 5;
 
-const mapOptions = {
-    disableDefaultUI: true,
-    zoomControl: true,
+// Helper component to handle map view changes
+const ChangeView = ({ center, zoom }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (center) {
+            map.setView(center, zoom, { animate: true });
+        }
+    }, [center, zoom, map]);
+    return null;
 };
 
 const OurMap = () => {
-    // Attempt to use VITE_GOOGLE_MAPS_API_KEY if available, otherwise it runs in development mode
-    const { isLoaded, loadError } = useJsApiLoader({
-        id: 'google-map-script',
-        googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
-    });
-
     const [allUsers, setAllUsers] = useState([]);
     const [states] = useState(Object.keys(indiaData));
     const [cities, setCities] = useState([]);
@@ -37,20 +40,11 @@ const OurMap = () => {
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [unlocatedUsers, setUnlocatedUsers] = useState([]);
     const [mapCenter, setMapCenter] = useState(defaultCenter);
+    const [mapZoom, setMapZoom] = useState(defaultZoom);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [showAdminInfo, setShowAdminInfo] = useState(false);
-
-    const mapRef = useRef(null);
-
-    const onLoad = useCallback(function callback(map) {
-        mapRef.current = map;
-    }, []);
-
-    const onUnmount = useCallback(function callback() {
-        mapRef.current = null;
-    }, []);
 
     const fetchUsers = async () => {
         setRefreshing(true);
@@ -58,8 +52,8 @@ const OurMap = () => {
             const users = await dataService.getAllUsers();
             setAllUsers(users);
             handleSearch(users);
-        } catch {
-            console.error("Failed to fetch users");
+        } catch (error) {
+            console.error("Error fetching users:", error);
         } finally {
             setRefreshing(false);
         }
@@ -71,8 +65,7 @@ const OurMap = () => {
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => setAdminLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => console.warn("Admin location access denied")
+                (pos) => setAdminLocation([pos.coords.latitude, pos.coords.longitude])
             );
         }
     }, []);
@@ -93,13 +86,11 @@ const OurMap = () => {
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
             const data = await response.json();
             if (data && data[0]) {
-                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
             }
-        } catch {
-            console.warn("Geocoding failed for", user.username);
-        }
+        } catch { }
         return null;
-    };
+    }
 
     const handleSearch = async (providedUsers = null) => {
         setLoading(true);
@@ -123,37 +114,41 @@ const OurMap = () => {
         const located = [];
         const unlocated = [];
 
-        for (const u of filtered) {
+        const geoTasks = [];
+        for (let i = 0; i < filtered.length; i++) {
+            const u = filtered[i];
             if (u.latitude && u.longitude) {
                 located.push({ ...u, lat: parseFloat(u.latitude), lng: parseFloat(u.longitude), source: 'gps' });
+            } else if (filtered.length < 20 && i < 10) {
+                geoTasks.push(
+                    attemptGeocode(u).then(coords => {
+                        if (coords) {
+                            return { ...u, lat: coords[0], lng: coords[1], source: 'approx' };
+                        }
+                        return null;
+                    })
+                );
             } else {
-                if (filtered.length < 20) {
-                    const coords = await attemptGeocode(u);
-                    if (coords) {
-                        located.push({ ...u, ...coords, source: 'approx' });
-                        continue;
-                    }
-                }
                 unlocated.push(u);
             }
+        }
+
+        if (geoTasks.length > 0) {
+            const geoResults = await Promise.all(geoTasks);
+            located.push(...geoResults.filter(r => r !== null));
         }
 
         setFilteredUsers(located);
         setUnlocatedUsers(unlocated);
 
         if (located.length > 0) {
-            setMapCenter({ lat: located[0].lat, lng: located[0].lng });
-            if (mapRef.current) {
-                mapRef.current.panTo({ lat: located[0].lat, lng: located[0].lng });
-                mapRef.current.setZoom(5);
-            }
+            setMapCenter([located[0].lat, located[0].lng]);
+            setMapZoom(8);
         } else if (selectedState) {
             setMapCenter(defaultCenter);
-            if (mapRef.current) {
-                mapRef.current.panTo(defaultCenter);
-                mapRef.current.setZoom(5);
-            }
+            setMapZoom(5);
         }
+
         setLoading(false);
     };
 
@@ -169,22 +164,41 @@ const OurMap = () => {
         return (R * c).toFixed(2);
     };
 
-    const getIconUrl = (role) => {
+    const getIcon = (role, isSelected = false) => {
         const r = role?.toUpperCase().replace('_', ' ');
+        let color = 'blue';
         switch (r) {
-            case 'RETAILER': return 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-            case 'DISTRIBUTOR': return 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-            case 'SUPER DISTRIBUTOR': return 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-            default: return 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+            case 'RETAILER': color = 'blue'; break;
+            case 'DISTRIBUTOR': color = 'green'; break;
+            case 'SUPER DISTRIBUTOR': color = 'gold'; break;
+            default: color = 'blue';
         }
+
+        return new L.Icon({
+            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: isSelected ? [30, 48] : [25, 41],
+            iconAnchor: isSelected ? [15, 48] : [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
     };
+
+    const adminIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 font-['Montserrat',sans-serif]">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic underline decoration-amber-500/50">Network Presence Map</h1>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Geospatial visualization of all regional endpoints</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Geospatial visualization of all regional endpoints (Leaflet Engine)</p>
                 </div>
                 <button onClick={fetchUsers} disabled={refreshing} className="flex items-center gap-2 px-6 py-2 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-50">
                     <RefreshCcw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -255,13 +269,10 @@ const OurMap = () => {
                                     key={i}
                                     className="p-3 bg-blue-50 border border-blue-100 rounded-2xl cursor-pointer hover:bg-blue-100 transform transition-transform hover:translate-x-1"
                                     onClick={() => {
-                                        const pos = { lat: u.lat, lng: u.lng };
+                                        const pos = [u.lat, u.lng];
                                         setMapCenter(pos);
+                                        setMapZoom(12);
                                         setSelectedUser(u);
-                                        if (mapRef.current) {
-                                            mapRef.current.panTo(pos);
-                                            mapRef.current.setZoom(12);
-                                        }
                                     }}
                                 >
                                     <div className="flex items-center gap-2 mb-1">
@@ -298,82 +309,64 @@ const OurMap = () => {
                 </div>
 
                 <div className="lg:col-span-3 bg-white border border-slate-100 rounded-[2.5rem] shadow-xl overflow-hidden min-h-[600px] relative">
-                    {!isLoaded ? (
-                        <div className="flex items-center justify-center h-full w-full bg-slate-50">
-                            <RefreshCcw size={32} className="animate-spin text-amber-500 mb-4" />
-                        </div>
-                    ) : loadError ? (
-                        <div className="flex items-center justify-center h-full w-full bg-red-50 text-red-500 font-bold p-8 text-center">
-                            Failed to load Google Maps. Please check your internet connection or API Key.
-                        </div>
-                    ) : (
-                        <GoogleMap
-                            mapContainerStyle={mapContainerStyle}
-                            center={mapCenter}
-                            zoom={5}
-                            options={mapOptions}
-                            onLoad={onLoad}
-                            onUnmount={onUnmount}
-                        >
-                            {/* Administrator Marker */}
-                            {adminLocation && (
-                                <MarkerF
-                                    position={adminLocation}
-                                    icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' }}
-                                    onClick={() => setShowAdminInfo(true)}
-                                >
-                                    {showAdminInfo && (
-                                        <InfoWindowF onCloseClick={() => setShowAdminInfo(false)}>
-                                            <div className="p-2 min-w-[120px]">
-                                                <p className="font-black text-[10px] text-red-500 uppercase tracking-widest">Administrator</p>
-                                                <p className="text-xs font-black text-slate-800 mt-1">Your Location</p>
-                                            </div>
-                                        </InfoWindowF>
-                                    )}
-                                </MarkerF>
-                            )}
+                    <MapContainer
+                        center={defaultCenter}
+                        zoom={defaultZoom}
+                        style={{ height: '600px', width: '100%' }}
+                        scrollWheelZoom={true}
+                    >
+                        <ChangeView center={mapCenter} zoom={mapZoom} />
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
 
-                            {/* User Markers with Clustering for Performance */}
-                            <MarkerClustererF>
-                                {(clusterer) => filteredUsers.map((user, idx) => (
-                                    <MarkerF
-                                        key={`marker_${idx}`}
-                                        position={{ lat: user.lat, lng: user.lng }}
-                                        clusterer={clusterer}
-                                        icon={{ url: getIconUrl(user.role) }}
-                                        onClick={() => setSelectedUser(user)}
-                                    />
-                                ))}
-                            </MarkerClustererF>
+                        {/* Administrator Marker */}
+                        {adminLocation && (
+                            <Marker position={adminLocation} icon={adminIcon}>
+                                <Popup>
+                                    <div className="p-1 min-w-[120px]">
+                                        <p className="font-black text-[10px] text-red-500 uppercase tracking-widest">Administrator</p>
+                                        <p className="text-xs font-black text-slate-800 mt-1">Your Location</p>
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        )}
 
-                            {selectedUser && (
-                                <InfoWindowF
-                                    position={{ lat: selectedUser.lat, lng: selectedUser.lng }}
-                                    onCloseClick={() => setSelectedUser(null)}
-                                >
-                                    <div className="p-2 space-y-2 min-w-[200px] bg-white rounded-lg">
+                        {/* User Markers */}
+                        {filteredUsers.map((user, idx) => (
+                            <Marker
+                                key={`marker_${idx}`}
+                                position={[user.lat, user.lng]}
+                                icon={getIcon(user.role, selectedUser?.id === user.id)}
+                                eventHandlers={{
+                                    click: () => setSelectedUser(user),
+                                }}
+                            >
+                                <Popup>
+                                    <div className="p-1 space-y-2 min-w-[180px] font-['Montserrat']">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 uppercase italic">
-                                                {selectedUser.name?.charAt(0) || 'U'}
+                                                {user.name?.charAt(0) || 'U'}
                                             </div>
                                             <div>
-                                                <p className="text-xs font-black text-slate-800">{selectedUser.name || selectedUser.username}</p>
-                                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{selectedUser.role}</p>
+                                                <p className="text-xs font-black text-slate-800">{user.name || user.username}</p>
+                                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest">{user.role}</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-1 mt-2">
                                             <div className="flex justify-between text-[10px] font-black">
                                                 <span className="text-slate-400">CONTACT:</span>
-                                                <span className="text-slate-700">{selectedUser.mobile}</span>
+                                                <span className="text-slate-700">{user.mobile}</span>
                                             </div>
                                             <div className="flex justify-between text-[10px] font-black mt-1">
                                                 <span className="text-slate-400">HUB:</span>
-                                                <span className="text-slate-700">{selectedUser.city}, {selectedUser.state}</span>
+                                                <span className="text-slate-700">{user.city}, {user.state}</span>
                                             </div>
                                             <div className="flex justify-between text-[10px] font-black mt-1">
                                                 <span className="text-slate-400">STATUS:</span>
-                                                <span className={selectedUser.source === 'gps' ? 'text-green-500' : 'text-blue-500'}>{selectedUser.source === 'gps' ? 'Verified GPS' : 'Approximate'}</span>
+                                                <span className={user.source === 'gps' ? 'text-green-500' : 'text-blue-500'}>{user.source === 'gps' ? 'Verified GPS' : 'Approximate'}</span>
                                             </div>
                                         </div>
 
@@ -384,32 +377,32 @@ const OurMap = () => {
                                                     <span className="text-[8px] font-black text-indigo-800 uppercase tracking-tight">DISTANCE</span>
                                                 </div>
                                                 <span className="text-[10px] font-black text-indigo-900 bg-indigo-50 px-2 py-1 rounded-md">
-                                                    {calculateDistance(adminLocation.lat, adminLocation.lng, selectedUser.lat, selectedUser.lng)} KM
+                                                    {calculateDistance(adminLocation[0], adminLocation[1], user.lat, user.lng)} KM
                                                 </span>
                                             </div>
                                         )}
                                     </div>
-                                </InfoWindowF>
-                            )}
-                        </GoogleMap>
-                    )}
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </MapContainer>
 
                     <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-md border border-slate-200 p-4 rounded-3xl shadow-2xl flex flex-col gap-3">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-2">Map Legend</p>
                         <div className="flex items-center gap-3">
-                            <img src="http://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="Admin" className="w-4 h-4" />
+                            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png" alt="Admin" className="w-3 h-5" />
                             <span className="text-[9px] font-black text-slate-700 uppercase">You (Admin)</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <img src="http://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="Retailer" className="w-4 h-4" />
+                            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png" alt="Retailer" className="w-3 h-5" />
                             <span className="text-[9px] font-black text-slate-700 uppercase">Retailer</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <img src="http://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="Distributor" className="w-4 h-4" />
+                            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png" alt="Distributor" className="w-3 h-5" />
                             <span className="text-[9px] font-black text-slate-700 uppercase">Distributor</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <img src="http://maps.google.com/mapfiles/ms/icons/yellow-dot.png" alt="Super Dist" className="w-4 h-4" />
+                            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png" alt="Super Dist" className="w-3 h-5" />
                             <span className="text-[9px] font-black text-slate-700 uppercase">Super Dist</span>
                         </div>
                     </div>
@@ -433,7 +426,7 @@ const OurMap = () => {
                     <Compass size={24} />
                 </div>
                 <div className="max-w-3xl">
-                    <p className="text-xs font-black text-amber-900 uppercase tracking-widest underline decoration-amber-500/30 mb-1">Geospatial Intelligence</p>
+                    <p className="text-xs font-black text-amber-900 uppercase tracking-widest underline decoration-amber-500/30 mb-1">Geospatial Intelligence (Normal Map)</p>
                     <p className="text-[10px] font-bold text-amber-800 leading-relaxed uppercase">Users are located based on their last active GPS signal. If GPS is unavailable, the system attempts to visualize them at their registered city hub (marked as Approximate). Unlocated users are shown in the sidebar list for tracking.</p>
                 </div>
             </div>

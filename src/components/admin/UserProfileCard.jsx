@@ -42,7 +42,6 @@ export function UserProfileCard({ userId, compact = false, onEdit }) {
       setUser(userData);
       setLocation(locData);
     } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -222,7 +221,7 @@ export function ManageHeaders() {
     try {
       const data = await employeeService.getAll();
       setEmployees(data || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { }
     finally { setLoading(false); }
   };
 

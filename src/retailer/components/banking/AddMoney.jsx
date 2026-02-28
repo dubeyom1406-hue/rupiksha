@@ -67,7 +67,6 @@ const AddMoney = () => {
                                 alert("Verification failed: " + verifyResult.message);
                             }
                         } catch (err) {
-                            console.error("Verification error:", err);
                             alert(`Error verifying payment: ${err.message}`);
                         }
                     },
@@ -108,7 +107,6 @@ const AddMoney = () => {
             */
 
         } catch (error) {
-            console.error("Payment Error:", error);
             alert("Connection error. Please ensure the backend is running.");
         } finally {
             setIsLoading(false);

@@ -1,5 +1,6 @@
 // Base API URL - apna backend URL yahan set karo
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+// Base API URL - Use Vite proxy to talk to backend
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Token helper
 const getToken = () => localStorage.getItem("rupiksha_token");

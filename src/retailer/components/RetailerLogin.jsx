@@ -83,8 +83,8 @@ const RetailerLogin = () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                        localStorage.setItem('rupiksha_token', data.token);
                         const role = data.user.role;
                         if (['NATIONAL_HEADER', 'STATE_HEADER', 'REGIONAL_HEADER'].includes(role)) {
                             navigate('/header');
@@ -141,7 +141,6 @@ const RetailerLogin = () => {
             });
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         } catch (err) {
-            console.warn("Location access denied or timed out");
         }
 
         try {

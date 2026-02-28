@@ -198,7 +198,7 @@ const Login = () => {
                             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
                         });
                         location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    } catch (e) { console.log("Location denied"); }
+                    } catch (e) { }
 
                     const logRes = await dataService.loginUser(loginForm.username, loginForm.password, location);
                     if (logRes.success) {

@@ -29,14 +29,22 @@ export const sharedDataService = {
         return s ? JSON.parse(s) : [];
     },
 
-    saveDistributors: function (dists) {
-        localStorage.setItem(this.KEYS.DISTRIBUTORS, JSON.stringify(dists));
-        window.dispatchEvent(new Event('distributorDataUpdated'));
+    saveDistributors: function (dists, silent = false) {
+        const old = localStorage.getItem(this.KEYS.DISTRIBUTORS);
+        const next = JSON.stringify(dists);
+        if (old === next) return;
+
+        localStorage.setItem(this.KEYS.DISTRIBUTORS, next);
+        if (!silent) window.dispatchEvent(new Event('distributorDataUpdated'));
     },
 
-    saveSuperAdmins: function (sas) {
-        localStorage.setItem(this.KEYS.SUPER_ADMINS, JSON.stringify(sas));
-        window.dispatchEvent(new Event('superadminDataUpdated'));
+    saveSuperAdmins: function (sas, silent = false) {
+        const old = localStorage.getItem(this.KEYS.SUPER_ADMINS);
+        const next = JSON.stringify(sas);
+        if (old === next) return;
+
+        localStorage.setItem(this.KEYS.SUPER_ADMINS, next);
+        if (!silent) window.dispatchEvent(new Event('superadminDataUpdated'));
     },
 
     getDistributorById: function (id) {

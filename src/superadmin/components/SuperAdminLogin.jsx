@@ -73,8 +73,8 @@ const SuperAdminLogin = () => {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                    localStorage.setItem('rupiksha_token', data.token);
                     navigate('/superadmin');
                 } else {
                     setLoginError(data.message || 'Invalid OTP');
@@ -84,12 +84,12 @@ const SuperAdminLogin = () => {
                 const res = await fetch(`${BACKEND_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...loginForm, role: 'SUPER_DISTRIBUTOR' })
+                    body: JSON.stringify({ ...loginForm, role: 'SUPERADMIN' })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('rupiksha_user', JSON.stringify(data.user));
+                    localStorage.setItem('rupiksha_token', data.token);
                     navigate('/superadmin');
                 } else {
                     setLoginError(data.message || 'Login failed');
@@ -119,7 +119,6 @@ const SuperAdminLogin = () => {
             });
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         } catch (err) {
-            console.warn("Location access denied or timed out");
         }
 
         try {

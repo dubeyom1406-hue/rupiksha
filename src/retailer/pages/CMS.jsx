@@ -38,7 +38,7 @@ const CMS = () => {
 
         dataService.verifyLocation()
             .then(loc => setLocation(loc))
-            .catch(err => console.error(err));
+            .catch(err => {});
     }, []);
 
     const handlePay = () => {

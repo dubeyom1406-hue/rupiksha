@@ -7,6 +7,7 @@ import {
     Eye, Edit2, Wallet, Smartphone, Mail, MapPin
 } from 'lucide-react';
 import { sharedDataService } from '../../services/sharedDataService';
+import { dataService } from '../../services/dataService';
 
 const Distributors = () => {
     const [distributors, setDistributors] = useState([]);
@@ -74,6 +75,19 @@ const Distributors = () => {
             }, sa ? sa.id : null);
 
             if (newDist) {
+                // Send Credentials Email
+                try {
+                    await dataService.resendCredentials({
+                        email: addForm.email,
+                        name: addForm.name,
+                        mobile: addForm.mobile,
+                        password: addForm.password,
+                        role: 'DISTRIBUTOR'
+                    });
+                } catch (emailErr) {
+                    console.error("Credentials email failed:", emailErr);
+                }
+
                 setShowSuccessView(true);
                 loadData();
                 setIsAddModalOpen(false);

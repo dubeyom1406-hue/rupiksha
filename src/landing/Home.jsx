@@ -5,11 +5,6 @@ import logo from '../assets/rupiksha_logo.png';
 import Footer from '../components/Footer';
 import VerticalCardSlider from '../components/VerticalCardSlider';
 const aadhaar_3d_logo = "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Aadhaar_Logo.svg/1200px-Aadhaar_Logo.svg.png";
-
-/* ─────────────────────────────────────────────
-   Tiny hook: trigger in-view class once element
-   crosses the viewport
-───────────────────────────────────────────── */
 function useInView(threshold = 0.15) {
     const ref = useRef(null);
     const [visible, setVisible] = useState(false);
@@ -23,11 +18,6 @@ function useInView(threshold = 0.15) {
     }, [threshold]);
     return [ref, visible];
 }
-
-/* ─────────────── Stagger grid wrapper ─────────────── */
-// One IntersectionObserver watches the *parent* wrapper.
-// When it enters view every .stagger-item gets its own
-// CSS transition-delay so cards pop in one by one.
 function StaggerGrid({ children, className = '', itemClassName = '', baseDelay = 0, step = 120 }) {
     const wrapRef = useRef(null);
     const [triggered, setTriggered] = useState(false);
@@ -59,8 +49,6 @@ function StaggerGrid({ children, className = '', itemClassName = '', baseDelay =
         </div>
     );
 }
-
-/* ─────────────── Reusable animated card (kept for non-grid use) ─────────────── */
 function AnimCard({ children, delay = 0, className = '' }) {
     const [ref, visible] = useInView();
     return (
@@ -74,7 +62,6 @@ function AnimCard({ children, delay = 0, className = '' }) {
     );
 }
 
-/* ─────────────── Section heading ─────────────── */
 function SectionHead({ tag, title, sub, center = true }) {
     const [ref, visible] = useInView();
     return (
@@ -85,48 +72,44 @@ function SectionHead({ tag, title, sub, center = true }) {
         </div>
     );
 }
-
-/* ══════════════════════════════════════════════
-   DATA
-══════════════════════════════════════════════ */
 const SERVICES = [
     {
-        label: 'AEPS',
+        emoji: '🏧', label: 'AEPS',
         subtitle: 'Aadhaar Enabled Payment System',
-        desc: 'Aadhaar Enabled Payment System allows customers to perform banking transactions using their Aadhaar number and biometric authentication.',
+        desc: 'Turn your shop into a bank branch. Allow customers to withdraw cash using only their Aadhaar number and fingerprint.',
         features: ['Cash withdrawals using Aadhaar authentication', 'Cash deposits to any bank account', 'Balance enquiry', 'Mini statements', 'Aadhaar Pay for merchant payments', 'Interoperable across all banks'],
         grad: 'linear-gradient(160deg,#14532d 0%,#15803d 60%,#16a34a 100%)',
         glow: 'rgba(22,163,74,0.6)', tag: 'RBI Certified',
         img: aadhaar_3d_logo,
     },
     {
-        emoji: '🏦', label: 'Banking Services',
-        subtitle: 'Comprehensive Banking Solutions',
-        desc: 'Extend banking services to your customers as a Business Correspondent. Provide account opening, cash deposits, withdrawals, and more.',
+        emoji: '🏠', label: 'Micro Banking',
+        subtitle: 'Digital Banking Hub',
+        desc: 'Offer comprehensive banking services including account opening, deposits, and cash services. Built for the modern Bharat retailer.',
         features: ['Account opening for multiple banks', 'Cash deposits and withdrawals', 'Balance enquiry and mini statements', 'Fixed and recurring deposit creation', 'Micro-ATM services'],
         grad: 'linear-gradient(160deg,#1e3a8a 0%,#1d4ed8 60%,#2563eb 100%)',
         glow: 'rgba(37,99,235,0.6)', tag: 'Pan India',
     },
     {
-        emoji: '🤝', label: 'Micro Loans',
-        subtitle: '₹5,000 – ₹50,000 Quick Loans',
-        desc: "Facilitate small loans for your customers' immediate needs. Our platform connects borrowers with lenders for quick and hassle-free loan disbursals.",
+        emoji: '💳', label: 'Micro Loan',
+        subtitle: 'Instant Credit Access',
+        desc: 'Help your customers bridge their financial gaps with small ticket loans. Powered by top NBFCs with instant disbursement.',
         features: ['Small ticket loans from ₹5,000 to ₹50,000', 'Quick approval process', 'Minimal documentation', 'Flexible repayment options', 'No collateral required'],
         grad: 'linear-gradient(160deg,#164e63 0%,#0891b2 60%,#06b6d4 100%)',
         glow: 'rgba(8,145,178,0.6)', tag: 'Fast Approval',
     },
     {
-        emoji: '💳', label: 'Neo Banking',
-        subtitle: 'Digital Banking Platform',
-        desc: 'Offer digital banking services with enhanced features and user experience. Our neo-banking platform provides a modern alternative to traditional banking.',
+        emoji: '🏦', label: 'Neo Bank',
+        subtitle: 'Next-Gen Digital Banking',
+        desc: 'Digital-first banking experience for the mobile generation. Open accounts instantly and manage finances smartly.',
         features: ['Digital savings accounts', 'Virtual debit cards', 'Real-time transaction notifications', 'Goal-based savings', 'Integrated investment options'],
         grad: 'linear-gradient(160deg,#1c1917 0%,#292524 60%,#44403c 100%)',
         glow: 'rgba(68,64,60,0.7)', tag: 'New',
     },
     {
-        emoji: '🏠', label: 'CSP',
+        emoji: '🏬', label: 'CSP Point',
         subtitle: 'Customer Service Point',
-        desc: 'Transform your shop into a Customer Service Point. Provide essential banking and government services to your local community.',
+        desc: 'Become a certified Customer Service Point. Provide vital banking and government services to your local community.',
         features: ['Dedicated banking outlet', 'Agent registration', 'Multiple bank connectivity', 'Local area service provider'],
         grad: 'linear-gradient(160deg,#713f12 0%,#a16207 60%,#ca8a04 100%)',
         glow: 'rgba(202,138,4,0.6)', tag: 'Business Opportunity',
@@ -478,7 +461,7 @@ function Services() {
             id="services"
             style={{ height: `${SERVICES.length * 100}vh`, background: '#fff', position: 'relative' }}
         >
-            {/* ── Sticky inner container ── */}
+            {/* Sticky inner container */}
             <div style={{
                 position: 'sticky', top: 0,
                 height: '100vh',
@@ -489,7 +472,7 @@ function Services() {
                 overflow: 'hidden',
             }}>
 
-                {/* ══ LEFT: Description panel ══ */}
+                {/* LEFT: Description panel */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
                     {/* Animated description block */}
                     <div style={{
