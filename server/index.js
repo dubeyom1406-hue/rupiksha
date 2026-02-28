@@ -122,7 +122,7 @@ const memoryStore = {
 })();
 
 // register endpoint
-app.post('/api/register', async (req, res) => {
+app.post('/register', async (req, res) => {
   try {
     const payload = req.body || {};
     const { name, mobile, email, password, role, businessName, state } = payload;
@@ -184,7 +184,7 @@ const adminOnly = (req, res, next) => {
 
 // POST /api/auth/login
 // POST /api/auth/login
-app.post("/api/auth/login", async (req, res) => {
+app.post("/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     const user = memoryStore.users.find(u => u.username === username || u.phone === username);
@@ -224,7 +224,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 // Alias for /api/login (Frontend compatibility)
-app.post("/api/login", async (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const user = memoryStore.users.find(u => u.username === username || u.phone === username);
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
@@ -238,7 +238,7 @@ app.post("/api/login", async (req, res) => {
 // ─── ADMIN & USER MANAGEMENT ROUTES ──────────────────────────────────────────
 
 // GET /api/all-users
-app.get("/api/all-users", async (req, res) => {
+app.get("/all-users", async (req, res) => {
   const users = memoryStore.users.filter(u => u.status !== 'TRASH').map(u => {
     const w = memoryStore.wallets.find(wallet => wallet.user_id === u.id);
     return { ...u, name: u.full_name, mobile: u.phone, balance: w ? w.balance : 0 };
@@ -247,13 +247,13 @@ app.get("/api/all-users", async (req, res) => {
 });
 
 // GET /api/trash-users
-app.get("/api/trash-users", async (req, res) => {
+app.get("/trash-users", async (req, res) => {
   const users = memoryStore.users.filter(u => u.status === 'TRASH');
   res.json({ success: true, users });
 });
 
 // POST /api/delete-user
-app.post("/api/delete-user", async (req, res) => {
+app.post("/delete-user", async (req, res) => {
   const { username } = req.body;
   const user = memoryStore.users.find(u => u.username === username || u.phone === username);
   if (user) user.status = 'TRASH';
@@ -261,7 +261,7 @@ app.post("/api/delete-user", async (req, res) => {
 });
 
 // POST /api/restore-user
-app.post("/api/restore-user", async (req, res) => {
+app.post("/restore-user", async (req, res) => {
   const { username } = req.body;
   const user = memoryStore.users.find(u => u.username === username || u.phone === username);
   if (user) user.status = 'ACTIVE';
@@ -269,7 +269,7 @@ app.post("/api/restore-user", async (req, res) => {
 });
 
 // POST /api/approve-user
-app.post("/api/approve-user", async (req, res) => {
+app.post("/approve-user", async (req, res) => {
   const { username, password, status, partyCode, parent_id } = req.body;
   const user = memoryStore.users.find(u => u.username === username || u.phone === username);
   if (user) {
@@ -282,7 +282,7 @@ app.post("/api/approve-user", async (req, res) => {
 });
 
 // POST /api/update-user-role
-app.post("/api/update-user-role", async (req, res) => {
+app.post("/update-user-role", async (req, res) => {
   const { username, newRole } = req.body;
   const user = memoryStore.users.find(u => u.username === username || u.phone === username);
   if (user) user.role = newRole;
@@ -292,7 +292,7 @@ app.post("/api/update-user-role", async (req, res) => {
 // ─── WALLET & TRANSACTION ROUTES ─────────────────────────────────────────────
 
 // POST /api/get-balance
-app.post("/api/get-balance", async (req, res) => {
+app.post("/get-balance", async (req, res) => {
   const { userId } = req.body;
   const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
   const w = memoryStore.wallets.find(wallet => wallet.user_id === (user ? user.id : -1));
@@ -300,7 +300,7 @@ app.post("/api/get-balance", async (req, res) => {
 });
 
 // GET /api/transactions
-app.get("/api/transactions", async (req, res) => {
+app.get("/transactions", async (req, res) => {
   const { userId } = req.query;
   const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
   const txns = memoryStore.transactions.filter(t => t.user_id === (user ? user.id : -1));
@@ -308,12 +308,12 @@ app.get("/api/transactions", async (req, res) => {
 });
 
 // GET /api/all-transactions
-app.get("/api/all-transactions", async (req, res) => {
+app.get("/all-transactions", async (req, res) => {
   res.json({ success: true, transactions: memoryStore.transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
 });
 
 // GET /api/kyc-status
-app.get("/api/kyc-status", async (req, res) => {
+app.get("/kyc-status", async (req, res) => {
   const { userId } = req.query;
   const user = memoryStore.users.find(u => u.username === userId || u.id == userId);
   const docs = [
@@ -324,17 +324,17 @@ app.get("/api/kyc-status", async (req, res) => {
 });
 
 // GET /api/portal-config
-app.get("/api/portal-config", (req, res) => {
+app.get("/portal-config", (req, res) => {
   res.json({ success: true, config: { maintenance: false, notice: "Welcome to Rupiksha!" } });
 });
 
 // GET /api/commissions
-app.get("/api/commissions", (req, res) => {
+app.get("/commissions", (req, res) => {
   res.json({ success: true, commissions: [] });
 });
 
 // POST /api/auth/logout
-app.post("/api/auth/logout", authMiddleware, (req, res) => {
+app.post("/auth/logout", authMiddleware, (req, res) => {
   // JWT is stateless — client deletes token
   res.json({ success: true });
 });
@@ -342,7 +342,7 @@ app.post("/api/auth/logout", authMiddleware, (req, res) => {
 // ─── DASHBOARD ROUTES ────────────────────────────────────────────────────────
 
 // GET /api/dashboard/topbar
-app.get("/api/dashboard/topbar", authMiddleware, async (req, res) => {
+app.get("/dashboard/topbar", authMiddleware, async (req, res) => {
   const totalWallet = memoryStore.wallets.reduce((acc, w) => acc + (parseFloat(w.balance) || 0), 0);
   const totalCommission = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => acc + (parseFloat(t.commission) || 0), 0);
   const totalCharges = memoryStore.transactions.filter(t => t.status === 'SUCCESS').reduce((acc, t) => acc + (parseFloat(t.charges) || 0), 0);
@@ -350,7 +350,7 @@ app.get("/api/dashboard/topbar", authMiddleware, async (req, res) => {
 });
 
 // GET /api/dashboard/live  — single endpoint for full live admin dashboard
-app.get("/api/dashboard/live", async (req, res) => {
+app.get("/dashboard/live", async (req, res) => {
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
@@ -419,7 +419,7 @@ app.get("/api/dashboard/live", async (req, res) => {
 });
 
 // POST /api/log-txn  — record a transaction
-app.post("/api/log-txn", async (req, res) => {
+app.post("/log-txn", async (req, res) => {
   const { userId, service, amount, operator, number, status, commission, charges } = req.body;
   const txn = {
     id: Date.now(),
@@ -445,7 +445,7 @@ app.post("/api/log-txn", async (req, res) => {
 });
 
 // GET /api/dashboard/stats
-app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
+app.get("/dashboard/stats", authMiddleware, async (req, res) => {
   const totalUsers = memoryStore.users.length;
   const activeUsers = memoryStore.users.filter(u => u.status === 'ACTIVE').length;
   const inactiveUsers = totalUsers - activeUsers;
@@ -497,7 +497,7 @@ app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
 // ─── EMPLOYEE ROUTES ─────────────────────────────────────────────────────────
 
 // GET /api/employees
-app.get("/api/employees", authMiddleware, async (req, res) => {
+app.get("/employees", authMiddleware, async (req, res) => {
   const employees = memoryStore.users.filter(u => ['NATIONAL', 'STATE', 'REGIONAL'].includes(u.role));
   const employeesWithUserCount = employees.map(emp => {
     const totalUsers = memoryStore.users.filter(u => u.created_by === emp.id).length;
@@ -507,7 +507,7 @@ app.get("/api/employees", authMiddleware, async (req, res) => {
 });
 
 // GET /api/employees/:id
-app.get("/api/employees/:id", authMiddleware, async (req, res) => {
+app.get("/employees/:id", authMiddleware, async (req, res) => {
   const user = memoryStore.users.find(u => u.id == req.params.id);
   if (!user) return res.status(404).json({ error: "Not found" });
   const u = { ...user }; // Create a copy to avoid modifying original in store
@@ -516,7 +516,7 @@ app.get("/api/employees/:id", authMiddleware, async (req, res) => {
 });
 
 // POST /api/employees/create
-app.post("/api/employees/create", authMiddleware, adminOnly, async (req, res) => {
+app.post("/employees/create", authMiddleware, adminOnly, async (req, res) => {
   const { username, password, fullName, phone, email, address, role, territory } = req.body;
   const hashedPass = await bcrypt.hash(password, 10);
   const newUser = {
@@ -542,7 +542,7 @@ app.post("/api/employees/create", authMiddleware, adminOnly, async (req, res) =>
 });
 
 // PUT /api/employees/:id
-app.put("/api/employees/:id", authMiddleware, adminOnly, async (req, res) => {
+app.put("/employees/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { fullName, phone, email, address, territory } = req.body;
     const user = memoryStore.users.find(u => u.id == req.params.id);
@@ -561,7 +561,7 @@ app.put("/api/employees/:id", authMiddleware, adminOnly, async (req, res) => {
 });
 
 // PUT /api/employees/:id/toggle-status
-app.put("/api/employees/:id/toggle-status", authMiddleware, adminOnly, async (req, res) => {
+app.put("/employees/:id/toggle-status", authMiddleware, adminOnly, async (req, res) => {
   try {
     const user = memoryStore.users.find(u => u.id == req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -576,7 +576,7 @@ app.put("/api/employees/:id/toggle-status", authMiddleware, adminOnly, async (re
 // ─── PERMISSIONS ROUTES ───────────────────────────────────────────────────────
 
 // GET /api/employees/:id/permissions
-app.get("/api/employees/:id/permissions", authMiddleware, async (req, res) => {
+app.get("/employees/:id/permissions", authMiddleware, async (req, res) => {
   try {
     const perms = memoryStore.permissions.filter(p => p.user_id == req.params.id)
       .map(p => ({ module: p.module_name, action: p.action_name, allowed: p.is_allowed }));
@@ -587,7 +587,7 @@ app.get("/api/employees/:id/permissions", authMiddleware, async (req, res) => {
 });
 
 // PUT /api/employees/:id/permissions
-app.put("/api/employees/:id/permissions", authMiddleware, adminOnly, async (req, res) => {
+app.put("/employees/:id/permissions", authMiddleware, adminOnly, async (req, res) => {
   try {
     const { permissions } = req.body;
     const userId = req.params.id;
@@ -615,7 +615,7 @@ app.put("/api/employees/:id/permissions", authMiddleware, adminOnly, async (req,
 // ─── LOCATION ROUTES ─────────────────────────────────────────────────────────
 
 // PUT /api/location/update (user apni location bhejta hai)
-app.put("/api/location/update", authMiddleware, async (req, res) => {
+app.put("/location/update", authMiddleware, async (req, res) => {
   try {
     const { latitude, longitude, timestamp } = req.body;
     const existingIdx = memoryStore.locations.findIndex(l => l.user_id == req.user.id);
@@ -638,7 +638,7 @@ app.put("/api/location/update", authMiddleware, async (req, res) => {
 });
 
 // GET /api/location/all (admin ko sab locations)
-app.get("/api/location/all", authMiddleware, async (req, res) => {
+app.get("/location/all", authMiddleware, async (req, res) => {
   try {
     const oneHourAgo = new Date(Date.now() - 3600000);
     const locations = memoryStore.locations
@@ -660,7 +660,7 @@ app.get("/api/location/all", authMiddleware, async (req, res) => {
 });
 
 // GET /api/location/:userId
-app.get("/api/location/:userId", authMiddleware, async (req, res) => {
+app.get("/location/:userId", authMiddleware, async (req, res) => {
   try {
     const loc = memoryStore.locations.find(l => l.user_id == req.params.userId);
     res.json(loc || null);
@@ -670,7 +670,7 @@ app.get("/api/location/:userId", authMiddleware, async (req, res) => {
 });
 
 // ─── OTP & EMAIL ROUTES ──────────────────────────────────────────────────────
-app.post("/api/send-otp", async (req, res) => {
+app.post("/send-otp", async (req, res) => {
   const { to, email, otp: clientOtp, name } = req.body;
   const targetEmail = to || email;
   if (!targetEmail) return res.status(400).json({ error: "Email required" });
@@ -699,7 +699,7 @@ app.post("/api/send-otp", async (req, res) => {
   }
 });
 
-app.post("/api/verify-otp", (req, res) => {
+app.post("/verify-otp", (req, res) => {
   const { email, identity, otp } = req.body;
   const target = email || identity;
   const stored = otpStore.get(target);
@@ -710,7 +710,7 @@ app.post("/api/verify-otp", (req, res) => {
   res.status(400).json({ error: "Invalid or expired OTP" });
 });
 
-app.post("/api/send-credentials", async (req, res) => {
+app.post("/send-credentials", async (req, res) => {
   const { to, name, login_id, password, portal_type, added_by } = req.body;
   try {
     await transporter.sendMail({
@@ -735,7 +735,7 @@ app.post("/api/send-credentials", async (req, res) => {
 });
 
 // POST /api/send-approval (Centralized from Vercel api/index.js)
-app.post("/api/send-approval", async (req, res) => {
+app.post("/send-approval", async (req, res) => {
   const { to, name, login_id, password, id_label, id_value, portal_type } = req.body;
   try {
     await transporter.sendMail({
@@ -759,7 +759,7 @@ app.post("/api/send-approval", async (req, res) => {
   }
 });
 
-app.post("/api/send-admin-otp", async (req, res) => {
+app.post("/send-admin-otp", async (req, res) => {
   const { email } = req.body;
   const ADMIN_OTP_EMAIL = "dubeyom1406@gmail.com";
   if (email !== ADMIN_OTP_EMAIL) return res.status(403).json({ error: "Access Denied" });
@@ -780,7 +780,7 @@ app.post("/api/send-admin-otp", async (req, res) => {
   }
 });
 
-app.post("/api/verify-admin-otp", (req, res) => {
+app.post("/verify-admin-otp", (req, res) => {
   const { email, otp } = req.body;
   const stored = otpStore.get(email);
   if (stored && stored.otp === otp && Date.now() < stored.expires) {
@@ -793,10 +793,10 @@ app.post("/api/verify-admin-otp", (req, res) => {
 // ─── ALIAS & MISSING ROUTES ──────────────────────────────────────────────────
 
 // Health check
-app.get("/api/health", (req, res) => res.json({ success: true, status: "OK" }));
+app.get("/health", (req, res) => res.json({ success: true, status: "OK" }));
 
 // SuperAdmin OTP alias (frontend calls /api/request-otp)
-app.post("/api/request-otp", async (req, res) => {
+app.post("/request-otp", async (req, res) => {
   const { email } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore.set(email, { otp, expires: Date.now() + 120000 });
@@ -814,7 +814,7 @@ app.post("/api/request-otp", async (req, res) => {
 });
 
 // Forgot password
-app.post("/api/forgot-password", async (req, res) => {
+app.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
   const user = memoryStore.users.find(u => u.email === email);
   if (!user) return res.status(404).json({ error: "Email not found" });
@@ -832,7 +832,7 @@ app.post("/api/forgot-password", async (req, res) => {
 });
 
 // My retailers by parent
-app.get("/api/my-retailers", async (req, res) => {
+app.get("/my-retailers", async (req, res) => {
   const { parentId } = req.query;
   const users = memoryStore.users.filter(u => u.created_by == parentId && u.status !== 'TRASH').map(u => {
     const w = memoryStore.wallets.find(w => w.user_id === u.id);
@@ -842,20 +842,20 @@ app.get("/api/my-retailers", async (req, res) => {
 });
 
 // Portal config & commissions
-app.get("/api/portal-config", (req, res) => res.json({ success: true, config: { name: "RuPiKsha", version: "1.0" } }));
-app.get("/api/commissions", (req, res) => res.json({ success: true, commissions: [] }));
+app.get("/portal-config", (req, res) => res.json({ success: true, config: { name: "RuPiKsha", version: "1.0" } }));
+app.get("/commissions", (req, res) => res.json({ success: true, commissions: [] }));
 
 // Support tickets
-app.post("/api/raise-ticket", (req, res) => {
+app.post("/raise-ticket", (req, res) => {
   res.json({ success: true, ticket: { id: Date.now(), ...req.body, status: 'OPEN', created_at: new Date().toISOString() } });
 });
-app.get("/api/my-tickets", (req, res) => res.json({ success: true, tickets: [] }));
+app.get("/my-tickets", (req, res) => res.json({ success: true, tickets: [] }));
 
 // KYC upload stub
-app.post("/api/upload-kyc", (req, res) => res.json({ success: true, message: "KYC uploaded" }));
+app.post("/upload-kyc", (req, res) => res.json({ success: true, message: "KYC uploaded" }));
 
 // Bill fetch (BBPS)
-app.post("/api/bill-fetch", async (req, res) => {
+app.post("/bill-fetch", async (req, res) => {
   const { consumerNo } = req.body;
   res.json({
     success: true,
@@ -871,7 +871,7 @@ app.post("/api/bill-fetch", async (req, res) => {
 });
 
 // Bill pay
-app.post("/api/bill-pay", async (req, res) => {
+app.post("/bill-pay", async (req, res) => {
   const { userId, biller, consumerNo, amount } = req.body;
   const txn = { id: Date.now(), user_id: userId, type: 'BBPS', amount: parseFloat(amount) || 0, operator: biller || '', number: consumerNo || '', status: 'SUCCESS', commission: 0, created_at: new Date().toISOString() };
   memoryStore.transactions.push(txn);
@@ -879,7 +879,7 @@ app.post("/api/bill-pay", async (req, res) => {
 });
 
 // Recharge
-app.post("/api/recharge", async (req, res) => {
+app.post("/recharge", async (req, res) => {
   const { userId, operator, mobile, amount, type } = req.body;
   const txn = { id: Date.now(), user_id: userId, type: (type || 'RECHARGE').toUpperCase(), amount: parseFloat(amount) || 0, operator: operator || '', number: mobile || '', status: 'SUCCESS', commission: parseFloat(amount) * 0.02, created_at: new Date().toISOString() };
   memoryStore.transactions.push(txn);

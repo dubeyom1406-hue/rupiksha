@@ -1,6 +1,8 @@
 import { sendOTPEmail, sendCredentialsEmail } from './emailService';
 
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+// VITE_BACKEND_URL = https://rupiksha-backend.onrender.com  (NO /api at end)
+// Local dev: Vite proxy intercepts /api/* and forwards to localhost:5008
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 
 export const dataService = {
