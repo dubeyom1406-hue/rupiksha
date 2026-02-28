@@ -1996,8 +1996,32 @@ const Admin = () => {
 
     const [adminViewingDoc, setAdminViewingDoc] = useState(null);
 
+    // ── nav metadata ──────────────────────────────────────────────────
+    const SIMPLE_NAV = [
+        { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard', color: '#6366f1' },
+        { id: 'Approvals', icon: CheckCircle2, label: 'Approvals', color: '#10b981' },
+        { id: 'EmployeeManager', icon: ShieldCheck, label: 'Employment', color: '#8b5cf6' },
+        { id: 'Landing Content', icon: FileText, label: 'Landing CMS', color: '#f59e0b' },
+        { id: 'Services', icon: Package, label: 'Services', color: '#06b6d4' },
+        { id: 'Stats', icon: BarChart3, label: 'Stats', color: '#f97316' },
+        { id: 'Promotions', icon: Video, label: 'Promotions', color: '#a855f7' },
+        { id: 'OurMap', icon: MapPin, label: 'Our Map', color: '#22c55e' },
+        { id: 'Logins', icon: RefreshCcw, label: 'Login Logs', color: '#64748b' },
+        { id: 'Trash', icon: Trash2, label: 'Trash', color: '#ef4444' },
+        { id: 'Settings', icon: Settings, label: 'Settings', color: '#94a3b8' },
+    ];
+    const GROUP_NAV = [
+        { group: 'Super Dist.', icon: ShieldCheck, color: '#6366f1', children: [{ id: 'SuperDistributors', label: 'SA Control' }, { id: 'Plans-superdistributor', label: 'SA Plans' }] },
+        { group: 'Distributors', icon: Building2, color: '#f59e0b', children: [{ id: 'Distributors', label: 'Dist Control' }, { id: 'Plans-distributor', label: 'Dist Plans' }] },
+        { group: 'Retailers', icon: Users, color: '#3b82f6', children: [{ id: 'Retailers', label: 'Retailer Control' }, { id: 'Plans-retailer', label: 'Retailer Plans' }] },
+    ];
+    const activeLabel = SIMPLE_NAV.find(n => n.id === activeSection)?.label
+        || GROUP_NAV.flatMap(g => g.children).find(c => c.id === activeSection)?.label
+        || activeSection;
+
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex relative overflow-hidden">
+        <div className="min-h-screen flex relative overflow-hidden bg-[#0f1117]" style={{ fontFamily: "'Inter',sans-serif" }}>
+            {/* Modals */}
             {showApprovalModal && <ApprovalModal />}
             {showDistApprovalModal && renderDistApprovalModal()}
             {showSAApprovalModal && <SAApprovalModal />}
@@ -2006,104 +2030,77 @@ const Admin = () => {
             {showAssignModal && assignTargetDist && renderAssignRetailersModal()}
             {showCredentialCard && renderCredentialSharerModal()}
 
-            {/* Backdrop for Mobile */}
+            {/* Mobile overlay */}
             <AnimatePresence>
                 {showMobileSidebar && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={() => setShowMobileSidebar(false)}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
-                    />
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden" />
                 )}
             </AnimatePresence>
 
-            <div className={`fixed lg:relative w-64 bg-slate-900 text-white flex flex-col p-6 space-y-8 h-full z-50 transition-transform duration-300 ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-                <div className="flex flex-col items-center">
-                    <img src={mainLogo} alt="RUPIKSHA" className="h-12 object-contain brightness-0 invert mb-2" />
-                    <h1 className="text-xl font-black tracking-tighter italic text-emerald-400">RUPIKSHA ADMIN</h1>
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mt-1">Global CMS Control</p>
+            {/* ══════════════ SIDEBAR ══════════════ */}
+            <aside className={`fixed lg:relative w-[72px] hover:w-64 group/sidebar bg-[#0d1117] border-r border-white/[0.06] flex flex-col h-screen z-50 transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${showMobileSidebar ? 'translate-x-0 !w-64' : '-translate-x-full lg:translate-x-0'}`}>
+
+                {/* Logo area */}
+                <div className="flex items-center gap-3 px-4 py-5 border-b border-white/[0.06] shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/30">
+                        <img src={mainLogo} alt="R" className="h-5 object-contain brightness-0 invert" />
+                    </div>
+                    <div className="opacity-0 group-hover/sidebar:opacity-100 transition-all duration-200 overflow-hidden whitespace-nowrap">
+                        <p className="text-sm font-black text-white tracking-tight leading-none">RUPIKSHA</p>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Admin Console</p>
+                    </div>
                 </div>
 
-                <nav className="flex-1 space-y-1 overflow-y-auto">
-                    {/* ── Simple nav items ── */}
-                    {[
-                        { id: 'Approvals', icon: CheckCircle2 },
-                        { id: 'Dashboard', icon: LayoutDashboard },
-                        { id: 'EmployeeManager', icon: ShieldCheck, label: 'Employment' },
-                        { id: 'Landing Content', icon: FileText, label: 'Landing Page CMS' },
-                        { id: 'Trash', icon: Trash2 },
-                        { id: 'Services', icon: Package },
-                        { id: 'Promotions', icon: Video },
-                        { id: 'Stats', icon: BarChart3 },
-                        { id: 'Logins', icon: RefreshCcw, label: 'Logins' },
-                        { id: 'OurMap', icon: MapPin, label: 'Our Map' },
-                        { id: 'Settings', icon: Settings, label: 'Settings' },
-                    ].map(item => (
-                        <button key={item.id}
-                            onClick={() => { setActiveSection(item.id); setExpandedNav(null); setShowMobileSidebar(false); }}
-                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3
-                                ${activeSection === item.id ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/5 text-slate-400'}`}>
-                            <item.icon size={17} />
-                            <span className="text-sm font-bold uppercase tracking-wider">{item.label || item.id}</span>
-                        </button>
-                    ))}
+                {/* Navigation */}
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-0.5 px-2 scrollbar-hide">
+                    {SIMPLE_NAV.map(item => {
+                        const isActive = activeSection === item.id;
+                        return (
+                            <button key={item.id}
+                                onClick={() => { setActiveSection(item.id); setExpandedNav(null); setShowMobileSidebar(false); }}
+                                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-200 relative group/item ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'}`}>
+                                {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: item.color }} />}
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0`}
+                                    style={{ background: isActive ? `${item.color}22` : 'transparent' }}>
+                                    <item.icon size={16} style={{ color: isActive ? item.color : '#64748b' }} />
+                                </div>
+                                <span className={`text-[11px] font-bold uppercase tracking-wide whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-all duration-200 ${isActive ? 'text-white' : 'text-slate-400'}`}>{item.label}</span>
+                                {/* Tooltip */}
+                                <span className="absolute left-[68px] ml-1 px-2 py-1 bg-slate-800 border border-white/10 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/sidebar:!opacity-0 transition-all z-50 shadow-xl">{item.label}</span>
+                            </button>
+                        );
+                    })}
 
-                    {/* ── Expandable groups ── */}
-                    {[
-                        {
-                            group: 'Super Distributor Control', icon: ShieldCheck, color: 'indigo',
-                            children: [
-                                { id: 'SuperDistributors', label: 'Super Dist Control' },
-                                { id: 'Plans-superdistributor', label: 'SA Plans' },
-                            ]
-                        },
-                        {
-                            group: 'Distributors', icon: Building2, color: 'amber',
-                            children: [
-                                { id: 'Distributors', label: 'Dist Control' },
-                                { id: 'Plans-distributor', label: 'Dist Plans' },
-                            ]
-                        },
-                        {
-                            group: 'Retailers', icon: Users, color: 'blue',
-                            children: [
-                                { id: 'Retailers', label: 'Retailer Control' },
-                                { id: 'Plans-retailer', label: 'Retailer Plans' },
-                            ]
-                        },
-                    ].map(({ group, icon: Icon, color, children }) => {
+                    <div className="mx-2 my-2 border-t border-white/[0.05]" />
+
+                    {GROUP_NAV.map(({ group, icon: Icon, color, children }) => {
                         const isOpen = expandedNav === group;
                         const isActive = children.some(c => c.id === activeSection);
                         return (
                             <div key={group}>
-                                <button
-                                    onClick={() => setExpandedNav(isOpen ? null : group)}
-                                    className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3
-                                        ${isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/5 text-slate-400'}`}>
-                                    <Icon size={17} />
-                                    <span className="text-sm font-bold uppercase tracking-wider flex-1">{group}</span>
-                                    <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                <button onClick={() => setExpandedNav(isOpen ? null : group)}
+                                    className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all relative group/item ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'}`}>
+                                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: color }} />}
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: isActive ? `${color}22` : 'transparent' }}>
+                                        <Icon size={16} style={{ color: isActive ? color : '#64748b' }} />
+                                    </div>
+                                    <span className={`text-[11px] font-bold uppercase tracking-wide flex-1 text-left whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-all ${isActive ? 'text-white' : 'text-slate-400'}`}>{group}</span>
+                                    <ChevronDown size={12} className={`text-slate-600 opacity-0 group-hover/sidebar:opacity-100 transition-all ${isOpen ? 'rotate-180' : ''}`} />
+                                    <span className="absolute left-[68px] ml-1 px-2 py-1 bg-slate-800 border border-white/10 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/sidebar:!opacity-0 transition-all z-50 shadow-xl">{group}</span>
                                 </button>
                                 <AnimatePresence>
                                     {isOpen && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="overflow-hidden ml-4 mt-1 space-y-1">
-                                            {children.map(child => (
-                                                <button key={child.id}
-                                                    onClick={() => { setActiveSection(child.id); setShowMobileSidebar(false); }}
-                                                    className={`w-full text-left px-4 py-2.5 rounded-xl transition-all flex items-center gap-2
-                                                        ${activeSection === child.id
-                                                            ? 'bg-white/15 text-white font-black'
-                                                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                                                    <span className="text-[11px] font-bold uppercase tracking-widest">{child.label}</span>
-                                                </button>
-                                            ))}
+                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                            <div className="ml-4 mt-1 pl-3 border-l border-white/[0.07] space-y-0.5 opacity-0 group-hover/sidebar:opacity-100 transition-opacity">
+                                                {children.map(child => (
+                                                    <button key={child.id} onClick={() => { setActiveSection(child.id); setShowMobileSidebar(false); }}
+                                                        className={`w-full text-left py-2 px-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${activeSection === child.id ? 'text-white' : 'text-slate-500 hover:text-slate-200'}`}>
+                                                        {child.label}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -2111,397 +2108,219 @@ const Admin = () => {
                         );
                     })}
 
-                    {/* ── Plans (all) ── */}
-                    <button
-                        onClick={() => { setActiveSection('Plans'); setExpandedNav(null); setShowMobileSidebar(false); }}
-                        className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3
-                            ${activeSection === 'Plans' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/5 text-slate-400'}`}>
-                        <Crown size={17} />
-                        <span className="text-sm font-bold uppercase tracking-wider">All Plans</span>
+                    {/* All Plans */}
+                    <button onClick={() => { setActiveSection('Plans'); setExpandedNav(null); setShowMobileSidebar(false); }}
+                        className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all relative group/item ${activeSection === 'Plans' ? 'bg-white/10' : 'hover:bg-white/[0.04]'}`}>
+                        {activeSection === 'Plans' && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-amber-400" />}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: activeSection === 'Plans' ? '#f59e0b22' : 'transparent' }}>
+                            <Crown size={16} style={{ color: activeSection === 'Plans' ? '#f59e0b' : '#64748b' }} />
+                        </div>
+                        <span className={`text-[11px] font-bold uppercase tracking-wide whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-all ${activeSection === 'Plans' ? 'text-white' : 'text-slate-400'}`}>All Plans</span>
+                        <span className="absolute left-[68px] ml-1 px-2 py-1 bg-slate-800 border border-white/10 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/sidebar:!opacity-0 transition-all z-50 shadow-xl">All Plans</span>
                     </button>
                 </nav>
 
-                <button
-                    onClick={() => navigate('/dashboard')}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-bold transition-colors"
-                >
-                    <ArrowLeft size={18} />
-                    Back to Portal
-                </button>
-            </div>
+                {/* Bottom */}
+                <div className="border-t border-white/[0.06] px-2 py-3 shrink-0">
+                    <button onClick={() => navigate('/dashboard')}
+                        className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-white/[0.04] transition-all group/item relative">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                            <ArrowLeft size={15} className="text-slate-500" />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-all">Back to Portal</span>
+                        <span className="absolute left-[68px] ml-1 px-2 py-1 bg-slate-800 border border-white/10 text-white text-[10px] font-bold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/sidebar:!opacity-0 transition-all z-50 shadow-xl">Back to Portal</span>
+                    </button>
+                </div>
+            </aside>
 
-            <div className={`flex-1 overflow-y-auto ${activeSection === 'Dashboard' ? 'bg-[#020817]' : 'bg-slate-50'}`}>
+            {/* ══════════════ MAIN ══════════════ */}
+            <div className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ${activeSection === 'Dashboard' ? 'bg-[#020817]' : 'bg-slate-50'}`}>
+
+                {/* Top Header */}
                 {activeSection !== 'Dashboard' && (
-                    <header className="bg-white border-b border-slate-100 p-4 md:p-6 flex justify-between items-center sticky top-0 z-10">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setShowMobileSidebar(true)}
-                                className="p-2 hover:bg-slate-100 rounded-lg lg:hidden text-slate-600 transition-colors"
-                            >
-                                <LayoutDashboard size={24} />
+                    <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/60 px-5 py-3 flex items-center justify-between sticky top-0 z-30 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setShowMobileSidebar(true)}
+                                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-100 lg:hidden transition-all">
+                                <LayoutDashboard size={15} className="text-slate-600" />
                             </button>
-                            <div>
-                                <h2 className="text-lg md:text-2xl font-bold text-slate-800 uppercase tracking-tight">{activeSection} Control</h2>
-                                <p className="hidden sm:block text-xs text-slate-400 font-medium">Manage all application data in real-time</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">Admin</span>
+                                <ChevronRight size={11} className="text-slate-300 hidden sm:block" />
+                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider">{activeLabel}</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 md:gap-4">
-                            <button
-                                onClick={handleReset}
-                                className="p-2 md:p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                                title="Reset to Defaults"
-                            >
-                                <RefreshCcw size={20} />
+                        <div className="flex items-center gap-2">
+                            <button onClick={handleReset} title="Reset to defaults"
+                                className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-500 transition-all">
+                                <RefreshCcw size={14} />
                             </button>
-                            <button
-                                onClick={handleSave}
-                                className="bg-slate-900 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl font-bold text-[10px] md:text-sm shadow-xl shadow-slate-900/20 flex items-center gap-2 hover:bg-slate-800 active:scale-95 transition-all"
-                            >
-                                <Save size={18} className="hidden sm:block" />
-                                Save
+                            <button onClick={handleSave}
+                                className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide shadow-md shadow-indigo-500/30 hover:shadow-lg hover:scale-105 active:scale-95 transition-all">
+                                <Save size={13} /> Save
                             </button>
+                            <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
+                            <button className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-500 relative transition-all">
+                                <Zap size={14} />
+                                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                            </button>
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-md">A</div>
                         </div>
                     </header>
                 )}
 
-                <main className={activeSection === 'Dashboard' ? 'w-full min-h-full' : 'p-4 md:p-8 max-w-6xl mx-auto space-y-8'}>
-                    {status && (
-                        <div className={`p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                            {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-                            <span className="text-sm font-bold uppercase tracking-wide">{status.message}</span>
-                        </div>
-                    )}
+                {/* Page content */}
+                <main className={`flex-1 overflow-y-auto ${activeSection === 'Dashboard' ? '' : 'p-4 md:p-6'}`}>
+                    <AnimatePresence>
+                        {status && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                className={`mb-5 p-4 rounded-2xl flex items-center gap-3 ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                {status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                                <span className="text-sm font-bold">{status.message}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                    {activeSection === 'Approvals' && <ApprovalsTable />}
-                    {activeSection === 'Dashboard' && <LiveDashboard data={data} distributors={distributors} superadmins={superadmins} />}
-                    {activeSection === 'EmployeeManager' && <EmployeeManager />}
-                    {activeSection === 'Landing Content' && <LandingCMS />}
-                    {activeSection === 'Trash' && <TrashTable />}
-                    {activeSection === 'Stats' && <StatsEditor />}
-                    {activeSection === 'Services' && <ServicesEditor />}
-                    {activeSection === 'Promotions' && <PromotionsEditor />}
-                    {activeSection === 'Logins' && <LoginsTable />}
-                    {activeSection === 'Retailers' && <RetailersTable />}
-                    {activeSection === 'Distributors' && <DistributorsTable />}
-                    {activeSection === 'OurMap' && <OurMap />}
+                    <div className={activeSection === 'Dashboard' ? '' : 'max-w-6xl mx-auto space-y-5'}>
+                        {activeSection === 'Approvals' && <ApprovalsTable />}
+                        {activeSection === 'Dashboard' && <LiveDashboard data={data} distributors={distributors} superadmins={superadmins} />}
+                        {activeSection === 'EmployeeManager' && <EmployeeManager />}
+                        {activeSection === 'Landing Content' && <LandingCMS />}
+                        {activeSection === 'Trash' && <TrashTable />}
+                        {activeSection === 'Stats' && <StatsEditor />}
+                        {activeSection === 'Services' && <ServicesEditor />}
+                        {activeSection === 'Promotions' && <PromotionsEditor />}
+                        {activeSection === 'Logins' && <LoginsTable />}
+                        {activeSection === 'Retailers' && <RetailersTable />}
+                        {activeSection === 'Distributors' && <DistributorsTable />}
+                        {activeSection === 'OurMap' && <OurMap />}
+                        {activeSection === 'Plans' && <AdminPlanManager defaultType="retailer" />}
+                        {activeSection === 'Plans-retailer' && <AdminPlanManager defaultType="retailer" restrictType={true} />}
+                        {activeSection === 'Plans-distributor' && <AdminPlanManager defaultType="distributor" restrictType={true} />}
+                        {activeSection === 'Plans-superdistributor' && <AdminPlanManager defaultType="superdistributor" restrictType={true} />}
 
-                    {/* ── Plans sections ── */}
-                    {activeSection === 'Plans' && <AdminPlanManager defaultType="retailer" />}
-                    {activeSection === 'Plans-retailer' && <AdminPlanManager defaultType="retailer" restrictType={true} />}
-                    {activeSection === 'Plans-distributor' && <AdminPlanManager defaultType="distributor" restrictType={true} />}
-                    {activeSection === 'Plans-superdistributor' && <AdminPlanManager defaultType="superdistributor" restrictType={true} />}
-
-                    {activeSection === 'SuperDistributors' && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                            {/* Summary Stats */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                {[
-                                    { label: 'Network Reach', val: superadmins.length, sub: 'Active Super Dists', color: 'text-indigo-600', bg: 'bg-indigo-50/50' },
-                                    { label: 'Managed Partners', val: distributors.length, sub: 'Linked Distributors', color: 'text-amber-600', bg: 'bg-amber-50/50' },
-                                    { label: 'Total Retailers', val: (data.users || []).length, sub: 'Global Endpoints', color: 'text-emerald-600', bg: 'bg-emerald-50/50' },
-                                    { label: 'System Float', val: `₹ ${[...superadmins, ...distributors, ...(data.users || [])].reduce((acc, curr) => acc + parseFloat((curr.wallet?.balance || '0').replace(/,/g, '')), 0).toLocaleString()}`, sub: 'Locked Capital', color: 'text-slate-900', bg: 'bg-slate-50' },
-                                ].map((stat, i) => (
-                                    <div key={i} className={`${stat.bg} p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col justify-between`}>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{stat.label}</p>
-                                        <div className="mt-3">
-                                            <h2 className={`text-xl font-black ${stat.color} tracking-tighter leading-tight`}>{stat.val}</h2>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">{stat.sub}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-                                <div className="px-8 py-6 border-b flex justify-between items-center bg-white">
-                                    <div>
-                                        <h3 className="text-base font-black text-slate-800 uppercase italic tracking-tight">Super Distributor Universe</h3>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Hierarchical control & balance management</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setShowAddSAModal(true)}
-                                            className="px-4 py-2.5 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center gap-2"
-                                        >
-                                            <Plus size={14} /> Add SA
-                                        </button>
-                                        <button onClick={refreshData} className="p-2.5 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-xl transition-all">
-                                            <RefreshCcw size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-separate border-spacing-0">
-                                        <thead>
-                                            <tr className="bg-slate-50/50">
-                                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Partner Details</th>
-                                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Hierarchy Size</th>
-                                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Hierarchy Balance</th>
-                                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Action Control</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {(superadmins || []).filter(s => s?.status === 'Approved').map((sa, idx) => {
-                                                const distsUnder = distributors.filter(d => d.ownerId === sa.id);
-                                                const retailersDirect = (data.users || []).filter(u => u.ownerId === sa.id);
-                                                const retailersViaDist = (data.users || []).filter(u => {
-                                                    const dist = sharedDataService.getDistributorForRetailer(u.username);
-                                                    return dist && distsUnder.some(d => d.id === dist.id);
-                                                });
-                                                const totalRetailers = [...new Set([...retailersDirect, ...retailersViaDist])];
-
-                                                const safeParse = (val) => parseFloat((val || '0').toString().replace(/,/g, ''));
-                                                const hierarchyBalance = safeParse(sa.wallet?.balance) +
-                                                    distsUnder.reduce((acc, d) => acc + safeParse(d.wallet?.balance), 0) +
-                                                    totalRetailers.reduce((acc, r) => acc + safeParse(r.wallet?.balance), 0);
-
-                                                return (
-                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-[1.2rem] bg-indigo-600 text-white flex items-center justify-center text-xl font-black italic shadow-lg shadow-indigo-600/20">
-                                                                    {sa.name?.charAt(0)}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-black text-slate-800 uppercase italic tracking-tight">{sa.name}</p>
-                                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{sa.businessName}</p>
-                                                                    <div className="flex items-center gap-2 mt-1.5">
-                                                                        <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">ID: {sa.id}</span>
-                                                                        <a
-                                                                            href={`https://www.google.com/maps/search/?api=1&query=${sa.city}+${sa.state}`}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="text-[9px] font-black text-indigo-600 hover:underline flex items-center gap-1 uppercase"
-                                                                        >
-                                                                            <Link2 size={10} /> {sa.city}, {sa.state}
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="text-center bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
-                                                                    <p className="text-[9px] font-black text-amber-500 uppercase">Dists</p>
-                                                                    <p className="text-sm font-black text-amber-700">{distsUnder.length}</p>
-                                                                </div>
-                                                                <div className="text-center bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl">
-                                                                    <p className="text-[9px] font-black text-emerald-500 uppercase">Retailers</p>
-                                                                    <p className="text-sm font-black text-emerald-700">{totalRetailers.length}</p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div>
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total System Balance</p>
-                                                                <p className="text-lg font-black text-slate-900 tracking-tighter italic">₹ {hierarchyBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                                                                <p className="text-[8px] font-bold text-indigo-500 uppercase mt-0.5 tracking-widest">S.Dist Own: ₹ {sa.wallet?.balance || '0.00'}</p>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6 text-center">
-                                                            <div className="flex justify-center gap-3">
-                                                                <button
-                                                                    onClick={() => handleResendCredentials(sa)}
-                                                                    className="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100"
-                                                                    title="Resend Credentials"
-                                                                >
-                                                                    <Mail size={16} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        sessionStorage.setItem('superadmin_user', JSON.stringify(sa));
-                                                                        navigate('/superadmin');
-                                                                    }}
-                                                                    className="px-5 py-2.5 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                                                                >
-                                                                    <Eye size={14} /> Full Access
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleRoleChangeClick(sa)}
-                                                                    className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100"
-                                                                    title="Change Role"
-                                                                >
-                                                                    <TrendingUp size={16} />
-                                                                </button>
-                                                                <button onClick={() => handleReject(sa.username)} className="p-2.5 bg-red-50 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeSection === 'SuperAdmins' && (
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="p-6 border-b flex justify-between items-center bg-indigo-50/50">
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2"><ShieldCheck size={18} className="text-indigo-500" /> Super Distribution Panel</h3>
-                                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-black">{superadmins.length} TOTAL</span>
-                            </div>
-                            <div className="p-12 text-center space-y-4">
-                                <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-400 mx-auto border-2 border-dashed border-indigo-200">
-                                    <ShieldCheck size={40} />
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Enhanced Control Ready</h4>
-                                    <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">Access hierarchical data, network mapping, and balance tracking in the new <b>Super Dist Control</b> section.</p>
-                                </div>
-                                <button onClick={() => setActiveSection('SuperDistributors')} className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-indigo-600/20">Switch to Advanced View</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeSection === 'Settings' && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                            {/* Service Management */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                                <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><Zap size={18} className="text-blue-500" /> Service Toggle & Global Switches</h3>
-                                    <span className="text-[10px] font-black text-slate-400">CONTROL LIVE SERVICES</span>
-                                </div>
-                                <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {activeSection === 'SuperDistributors' && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {[
-                                        { id: 'aeps_active', label: 'AEPS Service', status: true },
-                                        { id: 'cms_active', label: 'CMS Collections', status: true },
-                                        { id: 'dmt_active', label: 'Money Transfer', status: true },
-                                        { id: 'recharge_active', label: 'Utility & Recharge', status: true },
-                                        { id: 'payout_active', label: 'Payout Hub', status: false }
-                                    ].map((service) => (
-                                        <div key={service.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                            <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{service.label}</span>
-                                            <button className={`w-12 h-6 rounded-full relative transition-colors ${service.status ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${service.status ? 'right-1' : 'left-1'}`}></div>
-                                            </button>
+                                        { label: 'Network Reach', val: superadmins.length, sub: 'Super Dists', color: '#6366f1', bg: '#eef2ff' },
+                                        { label: 'Distributors', val: distributors.length, sub: 'Linked', color: '#f59e0b', bg: '#fffbeb' },
+                                        { label: 'Retailers', val: (data.users || []).length, sub: 'Endpoints', color: '#10b981', bg: '#ecfdf5' },
+                                        { label: 'System Float', val: `₹${[...superadmins, ...distributors, ...(data.users || [])].reduce((a, c) => a + parseFloat((c.wallet?.balance || '0').replace(/,/g, '')), 0).toLocaleString('en-IN')}`, sub: 'Capital', color: '#334155', bg: '#f8fafc' },
+                                    ].map((s, i) => (
+                                        <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-3" style={{ background: s.bg }}>
+                                                <div className="w-3 h-3 rounded-full" style={{ background: s.color }} />
+                                            </div>
+                                            <p className="text-xl font-black" style={{ color: s.color }}>{s.val}</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{s.label}</p>
+                                            <p className="text-[9px] text-slate-300 mt-0.5">{s.sub}</p>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
 
-                            {/* Commission Configuration */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                                <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-700 flex items-center gap-2"><IndianRupee size={18} className="text-emerald-500" /> Commission Settings</h3>
-                                    <span className="text-[10px] font-black text-slate-400">BY SERVICE TYPE</span>
-                                </div>
-                                <div className="p-8 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Banking Commission (%)</h4>
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-600">AEPS Withdrawal</span>
-                                                    <input type="text" className="w-16 bg-white border rounded p-1 text-center text-xs font-black" defaultValue="0.25%" />
-                                                </div>
-                                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-600">CMS (EMI Pay)</span>
-                                                    <input type="text" className="w-16 bg-white border rounded p-1 text-center text-xs font-black" defaultValue="0.10%" />
-                                                </div>
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide mb-4 flex items-center gap-2"><UserPlus size={15} className="text-indigo-500" /> Provision Super Distributor</h3>
+                                    <form onSubmit={handleInviteSA} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {[
+                                            { label: 'Full Name', field: 'name', type: 'text' },
+                                            { label: 'Mobile', field: 'mobile', type: 'tel' },
+                                            { label: 'Email', field: 'email', type: 'email' },
+                                            { label: 'City', field: 'city', type: 'text' },
+                                        ].map(f => (
+                                            <div key={f.field}>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">{f.label}</label>
+                                                <input required={f.field !== 'city'} type={f.type}
+                                                    value={saInviteForm[f.field] || ''} onChange={e => setSaInviteForm(p => ({ ...p, [f.field]: e.target.value }))}
+                                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 transition-all" />
                                             </div>
+                                        ))}
+                                        <div className="md:col-span-2 lg:col-span-4 flex justify-end">
+                                            <button type="submit" disabled={saInviteLoading}
+                                                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-50 hover:scale-105 transition-all">
+                                                {saInviteLoading ? 'Sending...' : '+ Invite & Provision'}
+                                            </button>
                                         </div>
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">API Provider Settings</h4>
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-600">Primary AEPS API</span>
-                                                    <select className="bg-white border rounded p-1 text-[10px] font-bold">
-                                                        <option>ICICI Bank (Direct)</option>
-                                                        <option>PaisaWorld API</option>
-                                                        <option>Fino Payments</option>
-                                                    </select>
-                                                </div>
-                                                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-600">CMS Aggregator</span>
-                                                    <select className="bg-white border rounded p-1 text-[10px] font-bold">
-                                                        <option>BillAvenue</option>
-                                                        <option>Bharat Connect</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </form>
                                 </div>
-                            </div>
 
-                            {/* Global App Metadata */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-6">
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2 border-b pb-4"><Settings size={18} className="text-slate-500" /> Platform Metadata</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase">App Title</label>
-                                        <input type="text" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold" defaultValue="RUPIKSHA FINTECH" />
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                        <h3 className="font-black text-slate-800 text-sm uppercase tracking-wide">Super Distributor Network</h3>
+                                        <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full">{superadmins.length} accounts</span>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase">Support Email</label>
-                                        <input type="text" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold" defaultValue="support@rupiksha.com" />
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead><tr className="bg-slate-50 border-b border-slate-100">
+                                                {['Name', 'Username', 'Contact', 'Wallet', 'Status', 'Actions'].map(h => (
+                                                    <th key={h} className="text-left px-5 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                                                ))}
+                                            </tr></thead>
+                                            <tbody>
+                                                {superadmins.map((sa, i) => (
+                                                    <tr key={i} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors">
+                                                        <td className="px-5 py-3.5">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-xs font-black">{sa.name?.charAt(0) || 'S'}</div>
+                                                                <div><p className="text-xs font-black text-slate-800">{sa.name}</p><p className="text-[9px] text-slate-400">{sa.city || 'N/A'}</p></div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-xs font-mono text-indigo-600 font-bold">{sa.username || sa.id}</td>
+                                                        <td className="px-5 py-3.5"><p className="text-xs font-semibold text-slate-700">{sa.mobile}</p><p className="text-[9px] text-slate-400">{sa.email}</p></td>
+                                                        <td className="px-5 py-3.5 text-xs font-black text-emerald-600">₹{sa.wallet?.balance || '0.00'}</td>
+                                                        <td className="px-5 py-3.5"><span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${sa.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>{sa.status || 'Pending'}</span></td>
+                                                        <td className="px-5 py-3.5"><button onClick={() => handleLoginAdminSA(sa)} className="text-[9px] font-black text-indigo-600 border border-indigo-200 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">Login As</button></td>
+                                                    </tr>
+                                                ))}
+                                                {superadmins.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-slate-400 text-xs font-bold">No Super Distributors yet</td></tr>}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                    {showAddSAModal && <AddSuperAdminModal />}
-                    {showAddDistModal && renderAddDistributorModal()}
+                        )}
+
+                        {activeSection === 'Settings' && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center text-slate-400">
+                                <Settings size={36} className="mx-auto mb-3 opacity-20" />
+                                <p className="font-bold text-sm">Settings panel coming soon</p>
+                            </div>
+                        )}
+                    </div>
                 </main>
             </div>
 
-            {/* Success Success Modal */}
+            {/* Success credential overlay */}
             <AnimatePresence>
-                {showSuccessView && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/confetti.png')]"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            className="bg-white w-full max-w-md rounded-[3rem] overflow-hidden shadow-2xl text-center p-10 relative"
-                        >
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 via-emerald-400 to-blue-400"></div>
-
-                            <div className="flex justify-center mb-6">
-                                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center relative">
-                                    <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-20"></div>
-                                    <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-xl relative z-10">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-10 h-10">
-                                            <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
+                {showSuccessView && createdCredentials && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }}
+                            className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
+                            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 px-8 pt-8 pb-6 text-center">
+                                <div className="w-14 h-14 bg-white/20 rounded-2xl mx-auto mb-3 flex items-center justify-center">
+                                    <CheckCircle2 size={26} className="text-white" />
+                                </div>
+                                <h3 className="text-lg font-black text-white">Account Created!</h3>
+                                <p className="text-indigo-200 text-xs mt-1">Credentials sent via email ✅</p>
+                            </div>
+                            <div className="p-6 space-y-3">
+                                {[
+                                    { label: 'Username', value: createdCredentials?.username, cls: 'font-mono text-slate-800' },
+                                    { label: 'Password', value: createdCredentials?.password, cls: 'font-mono text-amber-600' },
+                                    { label: 'Portal', value: createdCredentials?.portalType, cls: 'text-blue-600' },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex justify-between items-center text-xs font-black uppercase tracking-wider py-2 border-b border-slate-100 last:border-0">
+                                        <span className="text-slate-400">{item.label}</span>
+                                        <span className={item.cls}>{item.value}</span>
                                     </div>
-                                </div>
+                                ))}
+                                <button onClick={() => setShowSuccessView(false)}
+                                    className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-[0.25em] shadow-xl hover:scale-[1.02] transition-all">
+                                    Continue to Dashboard
+                                </button>
                             </div>
-
-                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-2">CONGRATULATIONS</p>
-                            <h2 className="text-3xl font-black text-slate-800 italic mb-2 tracking-tight">Account Provisioned!</h2>
-                            <p className="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest leading-relaxed">
-                                Request processed successfully via RUPIKSHA Fintech Gateway
-                            </p>
-
-                            <div className="bg-slate-50 border-2 border-slate-100 rounded-3xl p-6 mb-8 text-left space-y-3">
-                                <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider">
-                                    <span className="text-slate-400">Login ID (Mobile):</span>
-                                    <span className="text-slate-800">{createdCredentials?.loginId}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider">
-                                    <span className="text-slate-400">Password:</span>
-                                    <span className="text-amber-600 font-mono text-sm">{createdCredentials?.password}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider pt-2 border-t border-slate-200">
-                                    <span className="text-slate-400">Portal:</span>
-                                    <span className="text-blue-600">{createdCredentials?.portalType}</span>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setShowSuccessView(false)}
-                                className="w-full bg-[#0d1b2e] text-white font-black py-5 rounded-2xl text-[11px] uppercase tracking-[0.25em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
-                            >
-                                CONTINUE TO DASHBOARD
-                            </button>
                         </motion.div>
                     </motion.div>
                 )}
